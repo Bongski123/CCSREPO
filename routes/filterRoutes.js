@@ -118,7 +118,7 @@ router.get('/authors', async (req, res) => {
 router.get('/keywords', async (req, res) => {
     try {
         const { query } = req.query;
-        const [keywords] = await db.promise().query('SELECT keyword_name FROM keywords WHERE keyword_name LIKE ?', [`%${query}%`]);
+        const [keywords] = await db.promise().query('SELECT keyword_name FROM keywords ');
         res.json(keywords.map(keyword => keyword.keyword_name));
     } catch (error) {
         console.error('Error fetching keywords:', error);
