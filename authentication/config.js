@@ -1,3 +1,5 @@
+
 module.exports = {
-    secretKey: process.env.SECRET_KEY,
-};
+    secretKey: process.env.JWT_SECRET_KEY || 'Nhel-secret-key',
+ 
+  };
