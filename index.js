@@ -26,6 +26,14 @@ const filterRoutes = require("./routes/filterRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 require("dotenv").config();
 
+const categoriesRoutes = require("./routes/categories");
+
+
+const keywordsRoutes = require("./routes/keywords");
+
+
+
+
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
@@ -49,6 +57,11 @@ app.use(filterRoutes);
 
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);
+
+
+app.use(categoriesRoutes);
+
+app.use(keywordsRoutes);
 
 app.get("/", (req, res) => {
   res.json({ Messsage: "NCF Repository Backend Running!" });
