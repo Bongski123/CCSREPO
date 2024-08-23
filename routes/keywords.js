@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.get('/keywords/all', async(req, res) =>{
     try{
-        const getAllRolesQuery = 'SELECT keyword_id, keyword_name FROM keywords';
+        const getAllRolesQuery = ' keyword_name FROM keywords';
         const[rows] = await db.promise().execute(getAllRolesQuery);
 
         res.status(200).json({keywords: rows});
