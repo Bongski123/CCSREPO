@@ -9,7 +9,7 @@ const router = express.Router();
 
 
 
-router.get('/keywords/all', async(req, res) =>{
+router.get('/keywords', async(req, res) =>{
     try{
         const getAllRolesQuery = ' SELECT keyword_name FROM keywords';
         const[rows] = await db.promise().execute(getAllRolesQuery);

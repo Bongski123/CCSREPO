@@ -115,15 +115,17 @@ router.get('/authors', async (req, res) => {
 });
 
 // Endpoint to fetch keywords based on query
-router.get('/keywords', async (req, res) => {
-    try {
-        const { query } = req.query;
-        const [keywords] = await db.promise().query('SELECT *  FROM keywords ');
-        res.json(keywords.map(keyword => keyword.keyword_name));
-    } catch (error) {
-        console.error('Error fetching keywords:', error);
-        res.status(500).json({ error: 'Failed to fetch keywords' });
+router.get('/keywords', async(req, res) =>{
+    try{
+        const getAllKeywordquery = ' SELECT * FROM keywords';
+        const[rows] = await db.promise().execute(getAllKeywordquery);
+
+        res.status(200).json({keywords: rows});
+    }catch(error){
+        console.error('Error getting roles:', error);
+        res.status(500).json({error: 'All keywords Endpoint Error!'});
     }
 });
+
 
 module.exports = router;
