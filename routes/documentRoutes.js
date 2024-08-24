@@ -8,7 +8,7 @@ const db = require('../database/db');
 // Directory where files will be uploaded locally
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-      cb(null, "./public/pdfs");
+      cb(null, "../public/pdfs");
     },
     filename: function(req, file, cb) {
       cb(null, `${Date.now()}_${file.originalname}`);
