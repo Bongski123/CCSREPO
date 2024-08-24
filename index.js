@@ -1,4 +1,6 @@
 const EventEmitter = require("events");
+require('dotenv').config();
+
 EventEmitter.defaultMaxListeners = 20;
 const fs = require('fs');
 const path = require('path');
