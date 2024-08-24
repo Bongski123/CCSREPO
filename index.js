@@ -28,7 +28,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 require("dotenv").config();
 
 const categoriesRoutes = require("./routes/categories");
-const pdfRoutes = require('./routes/pdfRoutes'); // Adjust the path as necessary
+const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
 
