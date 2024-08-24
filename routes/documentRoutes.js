@@ -6,7 +6,7 @@ const router = express.Router();
 const db = require('../database/db');
 
 // Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, '../public/pdfs');
+
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
@@ -15,13 +15,13 @@ if (!fs.existsSync(uploadDir)) {
 
 // Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
+    destination: function(req, file, cb) {
+      cb(null, "./public/pdfs");
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    },
-});
+    filename: function(req, file, cb) {
+      cb(null, `${Date.now()}_${file.originalname}`);
+    }
+  });
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
