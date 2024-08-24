@@ -30,7 +30,7 @@ const categoriesRoutes = require("./routes/categories");
 
 
 const keywordsRoutes = require("./routes/keywords");
-const pdfRoutes = require("./routes/pdfFILES");
+
 
 
 
@@ -53,7 +53,7 @@ app.use(authRoutes);
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
-app.use(pdfRoutes);
+
 // Browse Filter
 app.use(filterRoutes);
 
@@ -64,6 +64,26 @@ app.use(dashboardRoutes);
 app.use(categoriesRoutes);
 
 app.use(keywordsRoutes);
+
+
+
+
+
+
+app.use('/pdfs', express.static(path.join(__dirname, 'public')));
+
+// Define routes
+app.get('/pdf/:researchId', (req, res) => {
+  const { researchId } = req.params;
+  const filePath = path.join(__dirname, 'pdfs', `${researchId}.pdf`);
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error sending file:', err);
+      res.status(404).send('File not found');
+    }
+  });
+});
 
 app.get("/", (req, res) => {
   res.json({ Messsage: "NCF Repository Backend Running!" });
