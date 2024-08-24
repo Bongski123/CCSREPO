@@ -6,7 +6,7 @@ const router = express.Router();
 const db = require('../database/db');
 
 // Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, './public/pdfs');
+const uploadDir = path.resolve(__dirname, '../public/pdfs');
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
