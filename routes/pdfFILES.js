@@ -18,7 +18,7 @@ router.get('/pdf/:research_id', (req, res) => {
         
         if (result.length > 0) {
             const fileName = result[0].filename; // Ensure this matches your database field name
-            const filePath = path.join(__dirname, './opt/render/project/src/uploads', fileName);
+            const filePath = path.join(__dirname, '../uploads', fileName);
             
             // Check if the file exists
             fs.access(filePath, fs.constants.F_OK, (err) => {
