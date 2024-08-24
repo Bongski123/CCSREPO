@@ -1,5 +1,4 @@
 const EventEmitter = require("events");
-require('dotenv').config();
 
 EventEmitter.defaultMaxListeners = 20;
 const fs = require('fs');
@@ -27,7 +26,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const filterRoutes = require("./routes/filterRoutes");
 // Dashboard
 const dashboardRoutes = require("./routes/dashboardRoutes");
-require("dotenv").config();
+
 
 const categoriesRoutes = require("./routes/categories");
 const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
