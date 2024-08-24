@@ -1,12 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const db = require('../database/db');
+const db = require('../database/db'); // Adjust the path as necessary
 
 const router = express.Router();
-
-// Serve static files from the public directory
-router.use(express.static(path.join(__dirname, './public')));
 
 // API to fetch PDF file by research ID
 router.get('/pdf/:research_id', (req, res) => {
@@ -20,7 +17,7 @@ router.get('/pdf/:research_id', (req, res) => {
         }
         
         if (result.length > 0) {
-            const fileName = result[0].file_name;
+            const fileName = result[0].filename; // Ensure this matches your database field name
             const filePath = path.join(__dirname, '../public/pdfs', fileName);
             
             // Check if the file exists

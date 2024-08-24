@@ -28,7 +28,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 require("dotenv").config();
 
 const categoriesRoutes = require("./routes/categories");
-
+const pdfRoutes = require('./routes/pdfRoutes'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
 
@@ -66,7 +66,9 @@ app.use(categoriesRoutes);
 
 app.use(keywordsRoutes);
 
+app.use('/pdf', pdfRoutes);
 
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 
