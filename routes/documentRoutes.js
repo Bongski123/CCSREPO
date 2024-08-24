@@ -11,15 +11,21 @@ const uploadDir = path.resolve(__dirname, '../uploads');
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
+    console.log(`Created upload directory at ${uploadDir}`);
+} else {
+    console.log(`Upload directory already exists at ${uploadDir}`);
 }
 
 // Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        console.log('Saving file to:', uploadDir);
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
+        const filename = `${Date.now()}-${file.originalname}`;
+        console.log('Generated filename:', filename);
+        cb(null, filename);
     },
 });
 
@@ -27,6 +33,7 @@ const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
         cb(null, true);
     } else {
+        console.error('Invalid file type:', file.mimetype);
         cb(new Error('Invalid file type, only PDFs are allowed!'), false);
     }
 };
@@ -38,6 +45,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
         }
+
+        console.log('File uploaded successfully:', req.file);
 
         const { title, authors, categories, keywords, abstract } = req.body;
         const filename = req.file.filename;
