@@ -8,23 +8,27 @@ const db = require('../database/db');
 // Directory where files will be uploaded locally
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-      cb(null, "../public/pdfs");
+        const uploadDir = path.join(__dirname, '../public/pdfs');
+        // Ensure the directory exists
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
     filename: function(req, file, cb) {
-      cb(null, `${Date.now()}_${file.originalname}`);
+        cb(null, `${Date.now()}_${file.originalname}`);
     }
-  });
-  
-  const upload = multer({ storage });
-  
-  router.post('/upload', upload.single('file'), (req, res) => {
-    console.log(req.body);
-    console.log(req.file);
-    return res.json({ Status: "Success" });
-  });
+});
 
+const upload = multer({ storage });
 
 // Route to handle file upload
+router.post('/upload', upload.single('file'), (req, res) => {
+    console.log('Request body:', req.body);
+    console.log('Uploaded file details:', req.file);
+    return res.json({ Status: "Success" });
+});
+
 router.post('/create', (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err) {
