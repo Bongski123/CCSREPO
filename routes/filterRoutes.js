@@ -128,4 +128,29 @@ router.get('/keywords', async(req, res) =>{
 });
 
 
+
+// Assuming you have a separate route for authors
+router.get('/authors/:research_id', async (req, res) => {
+    try {
+      const researchId = req.params.research_id;
+      
+      const getAuthorsQuery = `
+        SELECT authors.name 
+        FROM authors 
+        JOIN research_authors ON authors.author_id = research_authors.author_id 
+        WHERE research_authors.research_id = ?
+      `;
+      const [rows] = await db.promise().execute(getAuthorsQuery, [researchId]);
+  
+      res.status(200).json(rows.map(row => row.name));
+    } catch (error) {
+      console.error('Error fetching authors:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+
+  
+  
+
 module.exports = router;
