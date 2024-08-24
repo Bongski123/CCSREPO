@@ -4,7 +4,7 @@ const path = require('path');
 const db = require('../database/db');
 
 const router = express.Router();
-app.use(cors());
+
 // Serve static files from the public directory
 router.use(express.static(path.join(__dirname, './public')));
 
