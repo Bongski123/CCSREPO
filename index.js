@@ -30,6 +30,7 @@ const categoriesRoutes = require("./routes/categories");
 
 
 const keywordsRoutes = require("./routes/keywords");
+const pdfRoutes = require("./routes/pdfFILES");
 
 
 
@@ -48,10 +49,11 @@ app.use(roleRoutes);
 app.use(userRoutes);
 app.use(authRoutes);
 
+
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
-
+app.use(pdfRoutes);
 // Browse Filter
 app.use(filterRoutes);
 
