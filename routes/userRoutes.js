@@ -110,4 +110,20 @@ router.put('/:user_id', async (req, res) =>{
     }
 });
 
+
+
+router.get('/programs/all', async(req, res) =>{
+
+    try {
+        const getAllUsersQuery = 'SELECT * FROM program';
+        const [rows] = await db.promise().execute(getAllUsersQuery);
+
+        res.status(200).json({ users: rows });
+    } catch (error) {
+        console.error('Error getting users:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
 module.exports = router;
