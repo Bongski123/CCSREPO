@@ -6,30 +6,37 @@ const router = express.Router();
 const db = require('../database/db');
 
 // Directory where files will be uploaded locally
+
+// Directory where files will be uploaded
+const uploadDir = path.resolve(__dirname, '../uploads');
+
+// Ensure upload directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        const uploadDir = path.join(__dirname, '../public/pdfs');
-        // Ensure the directory exists
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
+    destination: (req, file, cb) => {
         cb(null, uploadDir);
     },
-    filename: function(req, file, cb) {
-        cb(null, `${Date.now()}_${file.originalname}`);
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
+});
+
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
     }
-});
+};
 
-const upload = multer({ storage });
+const upload = multer({ storage, fileFilter });
 
-// Route to handle file upload
-router.post('/upload', upload.single('file'), (req, res) => {
-    console.log('Request body:', req.body);
-    console.log('Uploaded file details:', req.file);
-    return res.json({ Status: "Success" });
-});
+router.post('/upload', upload.single('file'), async (req, res) => {
 
-router.post('/create', (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err) {
             console.error('Multer error:', err);
