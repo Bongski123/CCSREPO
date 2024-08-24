@@ -13,7 +13,7 @@ router.get('/pdf/:research_id', (req, res) => {
     const researchID = req.params.research_id;
 
     // Retrieve file name from the database based on research ID
-    db.query('SELECT file_name FROM researches WHERE research_id = ?', [researchID], (err, result) => {
+    db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID], (err, result) => {
         if (err) {
             console.error('Error retrieving file name:', err);
             return res.status(500).send('Internal Server Error');
