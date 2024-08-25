@@ -115,12 +115,12 @@ router.put('/:user_id', async (req, res) =>{
 router.get('/programs/all', async(req, res) =>{
 
     try {
-        const getAllUsersQuery = 'SELECT * FROM program';
-        const [rows] = await db.promise().execute(getAllUsersQuery);
+        const getAllProgramsQuery = 'SELECT * FROM program';
+        const [rows] = await db.promise().execute(getAllProgramsQuery);
 
-        res.status(200).json({ users: rows });
+        res.status(200).json({ programs: rows });
     } catch (error) {
-        console.error('Error getting users:', error);
+        console.error('Error getting programs:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
