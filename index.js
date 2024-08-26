@@ -34,6 +34,9 @@ const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
 
+//google login
+
+const googleRoutes=require("./routes/googleLogin");
 
 
 
@@ -69,6 +72,10 @@ app.use(categoriesRoutes);
 app.use(keywordsRoutes);
 
 app.use('/pdf', pdfRoutes);
+
+//google
+
+app.use(googleRoutes);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
