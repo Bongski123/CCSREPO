@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const db = mysql.createPool({
     host: 'mysql-181872-0.cloudclusters.net',
     user: 'admin',
