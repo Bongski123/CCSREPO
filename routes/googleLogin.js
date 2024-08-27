@@ -7,7 +7,7 @@ const { OAuth2Client } = require('google-auth-library');
 const router = express.Router();
 
 // Replace with the correct Google OAuth Client ID
-const client = new OAuth2Client('1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com');
+const client = new OAuth2Client('968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com');
 
 router.post('/google-login', async (req, res) => {
   const { token } = req.body;
@@ -15,7 +15,7 @@ router.post('/google-login', async (req, res) => {
   try {
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: '1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com', // This should match the client ID
+      audience: '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com', // This should match the client ID
     });
 
     const payload = ticket.getPayload();
