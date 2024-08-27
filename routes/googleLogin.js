@@ -7,7 +7,10 @@ const db = require('../database/db');
 const { authenticateToken } = require('../authentication/middleware');
 
 const router = express.Router();
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // Use environment variable for client ID
+const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
+const JWT_SECRET = 'your_jwt_secret_key'; // Hardcoded JWT Secret Key
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 router.post('/google-login', async (req, res) => {
   const { token } = req.body;
@@ -16,7 +19,7 @@ router.post('/google-login', async (req, res) => {
     // Verify Google token
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
@@ -30,7 +33,7 @@ router.post('/google-login', async (req, res) => {
       // User exists, generate JWT token
       const accessToken = jwt.sign(
         { userId: user.user_id, email: user.email, roleId: user.role_id },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '1h' }
       );
 
@@ -46,7 +49,7 @@ router.post('/google-login', async (req, res) => {
       // Generate JWT token for new user
       const accessToken = jwt.sign(
         { userId: newUserId, email, roleId: 3 },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '1h' }
       );
 
