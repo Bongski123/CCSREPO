@@ -25,28 +25,28 @@ router.post('/google-login', async (req, res) => {
     if (user) {
       // Generate JWT token
       const accessToken = jwt.sign(
-        { userId: user.user_id, email: user.email },
+        { userId: user.user_id, email: user.email, roleId: user.role_id },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      res.status(200).json({ token: accessToken, userId: user.user_id });
+      res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
     } else {
       // If user does not exist, create a new user
       const result = await db.query(
-        'INSERT INTO users (google_id, email) VALUES (?, ?)',
-        [googleId, email]
+        'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
+        [googleId, email, 3] // Assuming a default role_id of 3 for new Google users
       );
       const newUserId = result.insertId;
 
       // Generate JWT token
       const accessToken = jwt.sign(
-        { userId: newUserId, email },
+        { userId: newUserId, email, roleId: 3 }, // Assuming a default role_id of 3 for new Google users
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      res.status(200).json({ token: accessToken, userId: newUserId });
+      res.status(200).json({ token: accessToken, userId: newUserId, roleId: 3 });
     }
   } catch (error) {
     res.status(401).json({ error: 'Invalid Google token' });
