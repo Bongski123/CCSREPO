@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const db = require('../database/db');
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 const { OAuth2Client } = require('google-auth-library');
-
+const config = require('../authentication/config');
+const secretKey = config.secretKey;
 const router = express.Router();
 
 // Replace with the correct Google OAuth Client ID
@@ -40,7 +41,7 @@ router.post('/google-login', async (req, res) => {
 
       const accessToken = jwt.sign(
         { userId: newUserId, email, roleId: 3 }, // Assuming a default role_id of 3 for new Google users
-        process.env.JWT_SECRET,
+        secretKey,
         { expiresIn: '1h' }
       );
 
