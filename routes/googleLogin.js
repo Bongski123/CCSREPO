@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise'); // Use the promise-based version
 const { OAuth2Client } = require('google-auth-library');
 
-const db = require('../database/db'); // Assuming this is already using mysql2/promise
+// Assuming you have properly set up `db` using mysql2/promise
+const db = require('../database/db'); 
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 
 const router = express.Router();
@@ -22,7 +23,8 @@ router.post('/google-login', async (req, res) => {
     const { sub: googleId, email } = payload;
 
     // Use promise-based query
-    const [user] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const user = rows[0];
 
     if (user) {
       const accessToken = jwt.sign(
@@ -33,7 +35,7 @@ router.post('/google-login', async (req, res) => {
 
       res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
     } else {
-      const result = await db.query(
+      const [result] = await db.query(
         'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
         [googleId, email, 3]
       );
@@ -48,6 +50,7 @@ router.post('/google-login', async (req, res) => {
       res.status(200).json({ token: accessToken, userId: newUserId, roleId: 3 });
     }
   } catch (error) {
+    console.error('Error during Google login:', error); // Log the error for debugging
     res.status(401).json({ error: 'Invalid Google token' });
   }
 });
