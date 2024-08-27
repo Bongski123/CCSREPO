@@ -23,10 +23,12 @@ router.post('/google-login', async (req, res) => {
     const { sub: googleId, email, name } = payload;
 
     // Determine role based on email domain
-    let roleId = 3; // Default role for non-gbox.ncf.edu.ph users
+    let roleId = 4; // Default role for non-gbox.ncf.edu.ph users
 
     if (email.endsWith('@gbox.ncf.edu.ph')) {
-      roleId = 2; // Assign role 2 for gbox.ncf.edu.ph users
+      roleId = 3; // Assign role 3 for gbox.ncf.edu.ph users (e.g., students)
+    } else if (email.endsWith('@ncf.edu.ph')) {
+      roleId = 2; // Assign role 2 for ncf.edu.ph users (e.g., employees)
     }
 
     // Check if the user already exists in the database
