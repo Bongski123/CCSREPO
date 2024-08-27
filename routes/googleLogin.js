@@ -1,10 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const mysql = require('mysql2/promise');
 const { OAuth2Client } = require('google-auth-library');
-
 const db = require('../database/db');
-const { authenticateToken } = require('../authentication/middleware');
 
 const router = express.Router();
 const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
@@ -23,9 +20,9 @@ router.post('/google-login', async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { sub: googleId, email } = payload;
+    const { sub: googleId, email, name } = payload; // Extract name from the payload
 
-    // Check user in the database
+    // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
 
@@ -41,8 +38,8 @@ router.post('/google-login', async (req, res) => {
     } else {
       // User does not exist, create new user
       const [result] = await db.query(
-        'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
-        [googleId, email, 3] // Default role_id for new users
+        'INSERT INTO users (google_id, email, name, role_id) VALUES (?, ?, ?, ?)',
+        [googleId, email, name, 3] // Default role_id for new users and insert name
       );
       const newUserId = result.insertId;
 
