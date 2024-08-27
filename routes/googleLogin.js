@@ -19,11 +19,9 @@ router.post('/google-login', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email } = payload;
 
-    // Check if the user exists in the database
     const [user] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
 
     if (user) {
-      // Generate JWT token
       const accessToken = jwt.sign(
         { userId: user.user_id, email: user.email, roleId: user.role_id },
         process.env.JWT_SECRET,
@@ -32,16 +30,14 @@ router.post('/google-login', async (req, res) => {
 
       res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
     } else {
-      // If user does not exist, create a new user
       const result = await db.query(
         'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
-        [googleId, email, 3] // Assuming a default role_id of 3 for new Google users
+        [googleId, email, 3]
       );
       const newUserId = result.insertId;
 
-      // Generate JWT token
       const accessToken = jwt.sign(
-        { userId: newUserId, email, roleId: 3 }, // Assuming a default role_id of 3 for new Google users
+        { userId: newUserId, email, roleId: 3 },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
