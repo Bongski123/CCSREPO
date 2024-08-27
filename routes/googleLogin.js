@@ -5,7 +5,9 @@ const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../auth
 const { OAuth2Client } = require('google-auth-library');
 
 const router = express.Router();
-const client = new OAuth2Client('https://cloud.appwrite.io/v1/account/sessions/oauth2/callback/google/66cc81e8001c8d846c12');
+
+// Replace with the correct Google OAuth Client ID
+const client = new OAuth2Client('1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com');
 
 router.post('/google-login', async (req, res) => {
   const { token } = req.body;
@@ -13,7 +15,7 @@ router.post('/google-login', async (req, res) => {
   try {
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: '1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com',
+      audience: '1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com', // This should match the client ID
     });
 
     const payload = ticket.getPayload();
@@ -32,12 +34,12 @@ router.post('/google-login', async (req, res) => {
     } else {
       const result = await db.query(
         'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
-        [googleId, email, 3]
+        [googleId, email, 3] // Assuming a default role_id of 3 for new Google users
       );
       const newUserId = result.insertId;
 
       const accessToken = jwt.sign(
-        { userId: newUserId, email, roleId: 3 },
+        { userId: newUserId, email, roleId: 3 }, // Assuming a default role_id of 3 for new Google users
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
