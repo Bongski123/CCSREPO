@@ -8,17 +8,17 @@ const { authenticateToken } = require('../authentication/middleware');
 
 const router = express.Router();
 const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
-const JWT_SECRET = 'your_jwt_secret_key'; // Hardcoded JWT Secret Key
+const JWT_SECRET = 'Nhel-secret-key'; // Hardcoded JWT Secret Key
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 router.post('/google-login', async (req, res) => {
-  const { token } = req.body;
+  const { id_token } = req.body; // Use id_token instead of token
 
   try {
     // Verify Google token
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: id_token, // Use idToken field here
       audience: GOOGLE_CLIENT_ID,
     });
 
@@ -62,4 +62,3 @@ router.post('/google-login', async (req, res) => {
 });
 
 module.exports = router;
-  
