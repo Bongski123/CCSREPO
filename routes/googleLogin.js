@@ -1,13 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const db = require('../database/db');
-const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
+const mysql = require('mysql2/promise'); // Use the promise-based version
 const { OAuth2Client } = require('google-auth-library');
-const config = require('../authentication/config');
-const secretKey = config.secretKey;
-const router = express.Router();
 
-// Replace with the correct Google OAuth Client ID
+const db = require('../database/db'); // Assuming this is already using mysql2/promise
+const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
+
+const router = express.Router();
 const client = new OAuth2Client('968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com');
 
 router.post('/google-login', async (req, res) => {
@@ -16,12 +15,13 @@ router.post('/google-login', async (req, res) => {
   try {
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com', // This should match the client ID
+      audience: '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com',
     });
 
     const payload = ticket.getPayload();
     const { sub: googleId, email } = payload;
 
+    // Use promise-based query
     const [user] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
 
     if (user) {
@@ -35,13 +35,13 @@ router.post('/google-login', async (req, res) => {
     } else {
       const result = await db.query(
         'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
-        [googleId, email, 3] // Assuming a default role_id of 3 for new Google users
+        [googleId, email, 3]
       );
       const newUserId = result.insertId;
 
       const accessToken = jwt.sign(
-        { userId: newUserId, email, roleId: 3 }, // Assuming a default role_id of 3 for new Google users
-        secretKey,
+        { userId: newUserId, email, roleId: 3 },
+        process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
 
