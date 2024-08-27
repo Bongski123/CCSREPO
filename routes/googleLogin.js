@@ -39,7 +39,7 @@ router.post('/google-login', async (req, res) => {
       // User does not exist, create new user
       const [result] = await db.query(
         'INSERT INTO users (google_id, email, name, role_id) VALUES (?, ?, ?, ?)',
-        [googleId, email, name, 3] // Default role_id for new users and insert name
+        [googleId, email, name, 2] // Default role_id for new users and insert name
       );
       const newUserId = result.insertId;
 
