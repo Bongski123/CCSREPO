@@ -1,10 +1,9 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const mysql = require('mysql2/promise'); // Use the promise-based version
+const mysql = require('mysql2/promise');
 const { OAuth2Client } = require('google-auth-library');
 
-// Assuming you have properly set up `db` using mysql2/promise
-const db = require('../database/db'); 
+const db = require('../database/db');
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 
 const router = express.Router();
@@ -14,6 +13,7 @@ router.post('/google-login', async (req, res) => {
   const { token } = req.body;
 
   try {
+    // Verify Google token
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com',
@@ -22,11 +22,12 @@ router.post('/google-login', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email } = payload;
 
-    // Use promise-based query
+    // Check user in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
 
     if (user) {
+      // Generate JWT token
       const accessToken = jwt.sign(
         { userId: user.user_id, email: user.email, roleId: user.role_id },
         process.env.JWT_SECRET,
@@ -35,12 +36,14 @@ router.post('/google-login', async (req, res) => {
 
       res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
     } else {
+      // Create new user
       const [result] = await db.query(
         'INSERT INTO users (google_id, email, role_id) VALUES (?, ?, ?)',
         [googleId, email, 3]
       );
       const newUserId = result.insertId;
 
+      // Generate JWT token
       const accessToken = jwt.sign(
         { userId: newUserId, email, roleId: 3 },
         process.env.JWT_SECRET,
