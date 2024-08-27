@@ -5,7 +5,7 @@ const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../auth
 const { OAuth2Client } = require('google-auth-library');
 
 const router = express.Router();
-const client = new OAuth2Client('1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com');
+const client = new OAuth2Client('https://cloud.appwrite.io/v1/account/sessions/oauth2/callback/google/66cc81e8001c8d846c12');
 
 router.post('/google-login', async (req, res) => {
   const { token } = req.body;
