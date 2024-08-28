@@ -43,27 +43,27 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const filename = req.file.filename;
 
         // Check if title already exists
-        const [existingDocument] = await db.promise().execute('SELECT title FROM researches WHERE title = ?', [title]);
+        const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
         if (existingDocument.length > 0) {
             return res.status(409).json({ error: 'Document with this title already exists!' });
         }
 
         // Insert research
-        const [result] = await db.promise().execute('INSERT INTO researches (title, publish_date, abstract, filename) VALUES (?, NOW(), ?, ?)', [title, abstract, filename]);
+        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename) VALUES (?, NOW(), ?, ?)', [title, abstract, filename]);
         const researchId = result.insertId;
 
         // Insert authors
         const insertAuthors = async (researchId, authors) => {
             const authorNames = authors.split(',').map(name => name.trim());
             for (const name of authorNames) {
-                let [author] = await db.promise().execute('SELECT author_id FROM authors WHERE author_name = ?', [name]);
+                let [author] =  await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
                 if (author.length === 0) {
-                    const [result] = await db.promise().execute('INSERT INTO authors (author_name) VALUES (?)', [name]);
+                    const [result] = await db.query().execute('INSERT INTO authors (author_name) VALUES (?)', [name]);
                     author = { author_id: result.insertId };
                 } else {
                     author = author[0];
                 }
-                await db.promise().execute('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+                await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
             }
         };
 
@@ -73,9 +73,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const insertCategories = async (researchId, categories) => {
             const categoryNames = categories.split(',').map(name => name.trim());
             for (const name of categoryNames) {
-                let [category] = await db.promise().execute('SELECT category_id FROM category WHERE category_name = ?', [name]);
+                let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
                 if (category.length === 0) {
-                    const [result] = await db.promise().execute('INSERT INTO category (category_name) VALUES (?)', [name]);
+                    const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
                     category = { category_id: result.insertId };
                 } else {
                     category = category[0];
@@ -90,9 +90,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const insertKeywords = async (researchId, keywords) => {
             const keywordNames = keywords.split(',').map(name => name.trim());
             for (const name of keywordNames) {
-                let [keyword] = await db.promise().execute('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+                let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
                 if (keyword.length === 0) {
-                    const [result] = await db.promise().execute('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+                    const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
                     keyword = { keyword_id: result.insertId };
                 } else {
                     keyword = keyword[0];

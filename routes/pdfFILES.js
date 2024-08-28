@@ -36,36 +36,6 @@ router.get('/pdf/:research_id', async (req, res) => {
         console.error('Error retrieving file name:', err);
         res.status(500).send('Internal Server Error');
     }
-});router.get('/pdf/:research_id', async (req, res) => {
-    const researchID = req.params.research_id;
-
-    try {
-        // Retrieve file name from the database based on research ID
-        const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
-
-        if (result.length > 0) {
-            const fileName = result[0].filename;
-            const filePath = path.resolve(__dirname, '../uploads', fileName);
-
-            console.log('Resolved file path:', filePath);
-
-            fs.access(filePath, fs.constants.F_OK, (err) => {
-                if (err) {
-                    console.error('Error accessing file:', err);
-                    return res.status(404).send('File not found');
-                }
-                
-                // Serve the PDF file
-                res.sendFile(filePath);
-            });
-        } else {
-            res.status(404).send('File not found');
-        }
-    } catch (err) {
-        console.error('Error retrieving file name:', err);
-        res.status(500).send('Internal Server Error');
-    }
 });
-
 
 module.exports = router;
