@@ -1,4 +1,4 @@
-const db = require("../database/db");
+const db = require('../database/db');
 
 // Fuzzy search algorithm function using Levenshtein distance
 const fuzzySearchAlgorithm = (searchTerm, targetString, threshold) => {
@@ -31,52 +31,50 @@ const fuzzySearchAlgorithm = (searchTerm, targetString, threshold) => {
     return matrix[s.length][t.length] <= threshold;
 };
 
-
-const Levenshtein = (req, res) => {
+const Levenshtein = async (req, res) => {
     const { query } = req.body;
+    const threshold = 5; // Set a default threshold value or get from request body
 
-    // Fetch documents from database with necessary joins
-    db.query(
-        `SELECT
-            r.research_id,
-            r.title,
-            r.publish_date,
-            r.abstract,
-            r.filename,
-            a.author_id,
-            a.author_name,
-            k.keyword_id,
-            k.keyword_name
-        FROM
-            researches r
-        JOIN
-            research_authors ra ON r.research_id = ra.research_id
-        JOIN
-            authors a ON ra.author_id = a.author_id
-        JOIN
-            research_keywords rk ON r.research_id = rk.research_id
-        JOIN
-            keywords k ON rk.keyword_id = k.keyword_id
-        WHERE
-            r.status = 'approved'`,
-        (err, results) => {
-            if (err) {
-                console.error("Error fetching documents from database: ", err);
-                res.status(500).json({ error: "Fetch Document Endpoint Error" });
-                return;
-            }
+    try {
+        // Fetch documents from database with necessary joins
+        const [results] = await db.query(`
+            SELECT
+                r.research_id,
+                r.title,
+                r.publish_date,
+                r.abstract,
+                r.filename,
+                a.author_id,
+                a.author_name,
+                k.keyword_id,
+                k.keyword_name
+            FROM
+                researches r
+            JOIN
+                research_authors ra ON r.research_id = ra.research_id
+            JOIN
+                authors a ON ra.author_id = a.author_id
+            JOIN
+                research_keywords rk ON r.research_id = rk.research_id
+            JOIN
+                keywords k ON rk.keyword_id = k.keyword_id
+            WHERE
+                r.status = 'approved'
+        `);
 
-            // Filter results using fuzzy search algorithm
-            const filteredResults = results.filter(result =>
-                fuzzySearchAlgorithm(query, result.title) ||
-                fuzzySearchAlgorithm(query, result.author_name) ||
-                fuzzySearchAlgorithm(query, result.keyword_name) ||
-                fuzzySearchAlgorithm(query, result.abstract)
-            );
+        // Filter results using fuzzy search algorithm
+        const filteredResults = results.filter(result =>
+            fuzzySearchAlgorithm(query, result.title, threshold) ||
+            fuzzySearchAlgorithm(query, result.author_name, threshold) ||
+            fuzzySearchAlgorithm(query, result.keyword_name, threshold) ||
+            fuzzySearchAlgorithm(query, result.abstract, threshold)
+        );
 
-            res.status(200).json(filteredResults);
-        }
-    );
+        res.status(200).json({ results: filteredResults });
+    } catch (error) {
+        console.error('Error fetching documents or performing search: ', error);
+        res.status(500).json({ error: 'Fetch Document Endpoint Error' });
+    }
 };
 
 module.exports = { Levenshtein };
