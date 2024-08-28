@@ -8,12 +8,12 @@ const db = require('../database/db');
 // Directory where files will be uploaded
 const uploadDir = path.resolve(__dirname, '../uploads/files');
 
-// Ensure upload directory exists
+// Ensure the upload directory exists
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer for file uploads with file filter
+// Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadDir);
@@ -27,7 +27,7 @@ const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
         cb(null, true);
     } else {
-        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
+        cb(new Error('Invalid file type. Only PDFs are allowed.'), false);
     }
 };
 
@@ -36,28 +36,24 @@ const upload = multer({ storage, fileFilter });
 router.post('/upload', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
+            return res.status(400).json({ error: 'No file uploaded or invalid file type. Only PDFs are allowed.' });
         }
 
         const { title, authors = [], categories = [], keywords = [], abstract } = req.body;
         const filename = req.file.filename;
 
-        // Check if title already exists
+        // Check if the document title already exists
         const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
         if (existingDocument.length > 0) {
-            return res.status(409).json({ error: 'Document with this title already exists!' });
+            return res.status(409).json({ error: 'Document with this title already exists.' });
         }
 
-        // Insert research
+        // Insert research record
         const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename) VALUES (?, NOW(), ?, ?)', [title, abstract, filename]);
         const researchId = result.insertId;
 
-        // Helper function to insert data
+        // Helper function to handle data insertion
         const insertData = async (tableName, columnName, values) => {
-            // Ensure values is an array
-            if (!Array.isArray(values)) {
-                values = [];
-            }
             const valuePromises = values.map(async (value) => {
                 let [result] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
                 if (result.length === 0) {
@@ -82,12 +78,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const keywordIds = await insertData('keywords', 'keyword', keywords);
         await Promise.all(keywordIds.map(id => db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, id])));
 
-        res.status(201).json({ message: 'Document Uploaded Successfully' });
+        res.status(201).json({ message: 'Document uploaded successfully.' });
     } catch (error) {
-        console.error('Error Upload Document:', error);
-        res.status(500).json({ error: `Upload Document Endpoint Error: ${error.message}` });
+        console.error('Error uploading document:', error);
+        res.status(500).json({ error: `Server error: ${error.message}` });
     }
 });
-
 
 module.exports = router;
