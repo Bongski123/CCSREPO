@@ -71,7 +71,7 @@ app.use(categoriesRoutes);
 
 app.use(keywordsRoutes);
 
-app.use('/pdf', pdfRoutes);
+app.use(pdfRoutes);
 
 //google
 
