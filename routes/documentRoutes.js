@@ -5,34 +5,23 @@ const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
 
-// Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, '../uploads/files');
-
-// Ensure the upload directory exists
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for file uploads
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
+    destination: function(req, file, cb) {
+      cb(null, "./public/pdfs");
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    },
-});
-
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-        cb(null, true);
-    } else {
-        cb(new Error('Invalid file type. Only PDFs are allowed.'), false);
+    filename: function(req, file, cb) {
+      cb(null, `${Date.now()}_${file.originalname}`);
     }
-};
-
-const upload = multer({ storage, fileFilter });
-router.post('/upload', upload.single('file'), async (req, res) => {
+  });
+  
+  const upload = multer({ storage });
+  
+  router.post('/upload', upload.single('file'), (req, res) => {
+    console.log(req.body);
+    console.log(req.file);
+    return res.json({ Status: "Success" });
+  });
+router.post('/create', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
