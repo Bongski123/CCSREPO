@@ -2,13 +2,13 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
-const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
+const {authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role_id, program_id } = req.body;
+        const { name, email, password, role_id, program_id} = req.body;
 
         if (!name || !email || !password || !role_id || !program_id) {  
             return res.status(400).json({ error: 'Missing required fields' });
@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
 
         // Check if user with the same email already exists
         const checkUserByEmailQuery = 'SELECT * FROM users WHERE email = ?';
-        const [existingUserByEmailRows] = await db.execute(checkUserByEmailQuery, [email]);
+        const [existingUserByEmailRows] = await db.promise().execute(checkUserByEmailQuery, [email]);
 
         if (existingUserByEmailRows.length > 0) {
             return res.status(409).json({ error: 'User with this email already exists' });
@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const insertUserQuery = 'INSERT INTO users (name, email, password, role_id, program_id) VALUES (?, ?, ?, ?, ?)';
-        await db.execute(insertUserQuery, [name, email, hashedPassword, role_id, program_id]);
+        await db.promise().execute(insertUserQuery, [name, email, hashedPassword, role_id, program_id]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
@@ -42,15 +42,11 @@ router.post('/register', async (req, res) => {
 });
 
 
-router.get('/users/all', async (req, res) => {
+router.get('/users/all', async(req, res) =>{
+
     try {
-        const getAllUsersQuery = `
-            SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name
-            FROM users u
-            JOIN roles r ON u.role_id = r.role_id
-            LEFT JOIN program p ON u.program_id = p.program_id;
-        `;
-        const [rows] = await db.execute(getAllUsersQuery);
+        const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
+        const [rows] = await db.promise().execute(getAllUsersQuery);
 
         res.status(200).json({ users: rows });
     } catch (error) {
@@ -59,8 +55,8 @@ router.get('/users/all', async (req, res) => {
     }
 });
 
+router.get('/users/:user_id', async(req, res) =>{
 
-router.get('/users/:user_id', async (req, res) => {
     try {
         const userId = req.params.user_id;
 
@@ -68,14 +64,8 @@ router.get('/users/:user_id', async (req, res) => {
             return res.status(400).json({ error: 'Please provide user id' });
         }
 
-        const getUserQuery = `
-            SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name
-            FROM users u
-            JOIN roles r ON u.role_id = r.role_id
-            LEFT JOIN program p ON u.program_id = p.program_id
-            WHERE u.user_id = ?;
-        `;
-        const [rows] = await db.execute(getUserQuery, [userId]);
+        const getUserQuery = 'SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id WHERE u.user_id = ?';
+        const [rows] = await db.promise().execute(getUserQuery, [userId]);
 
         if (rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
@@ -89,48 +79,49 @@ router.get('/users/:user_id', async (req, res) => {
 });
 
 
+// update user by id
+router.put('/:user_id', async (req, res) =>{
 
-router.put('/:user_id', async (req, res) => {
-    try {
+    try{
+
         const userId = req.params.user_id;
         const { name, email, password } = req.body;
 
-        const getUserQuery = `
-            SELECT u.user_id, u.email, u.name, u.role_id, r.role_name
-            FROM users u
-            JOIN roles r ON u.role_id = r.role_id
-            WHERE u.user_id = ?;
-        `;
-        const [userRows] = await db.execute(getUserQuery, [userId]);
+        const getUserQuery = 'SELECT u.user_id, u.email, u.name, u.role_id, r.role_name FROM user u JOIN role r ON u.role_id = r.role_id WHERE u.user_id = ?';
+        const [userRows] = await db.promise().execute(getUserQuery, [userId]);
 
-        if (userRows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
+        if(userRows.length === 0){
+            return res.status(404).json({error: 'User not found'});
         }
 
         const user = userRows[0];
         const hashedPassword = await bcrypt.hash(password, 10);
-        const updateUserQuery = 'UPDATE users SET name = ?, email = ?, password = ? WHERE user_id = ?';
-        await db.execute(updateUserQuery, [name, email, hashedPassword, userId]);
+        const updateUserQuery = 'UPDATE user SET name = ?, email = ?, password = ? WHERE user_id = ?';
+        await db.promise().execute(updateUserQuery, [name, email, hashedPassword, userId]);
 
-        const updatedUser = { ...user, name };
+        const updatedUser = { ...user, id_number, name, is_active, role_name: user.role_name };
         res.status(200).json({ message: 'User updated successfully', user: updatedUser });
 
-    } catch (error) {
+    }
+    
+    catch(error){
         console.error('Error updating user:', error);
-        res.status(500).json({ error: 'User Update Endpoint Error!' });
+        res.status(500).json({error: 'User Update Endpoint Error!'});
     }
 });
 
 
+router.get('/programs/all', async(req, res) =>{
 
-router.get('/programs/all', async (req, res) => {
     try {
-        const getAllProgramsQuery = 'SELECT * FROM program';
-        const [rows] = await db.execute(getAllProgramsQuery);
+        const getAllUsersQuery = 'SELECT * FROM program;';
+        const [rows] = await db.promise().execute(getAllUsersQuery);
 
-        res.status(200).json({ programs: rows });
+        res.status(200).json({ users: rows });
     } catch (error) {
-        console.error('Error getting programs:', error);
+        console.error('Error getting users:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+module.exports = router;
