@@ -54,6 +54,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         // Helper function to insert data
         const insertData = async (tableName, columnName, values) => {
+            // Ensure values is an array
+            if (!Array.isArray(values)) {
+                values = [];
+            }
             const valuePromises = values.map(async (value) => {
                 let [result] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
                 if (result.length === 0) {
@@ -81,7 +85,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         res.status(201).json({ message: 'Document Uploaded Successfully' });
     } catch (error) {
         console.error('Error Upload Document:', error);
-        // Provide a more detailed error message
         res.status(500).json({ error: `Upload Document Endpoint Error: ${error.message}` });
     }
 });
