@@ -81,8 +81,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         res.status(201).json({ message: 'Document Uploaded Successfully' });
     } catch (error) {
         console.error('Error Upload Document:', error);
-        res.status(500).json({ error: 'Upload Document Endpoint Error!' });
+        // Provide a more detailed error message
+        res.status(500).json({ error: `Upload Document Endpoint Error: ${error.message}` });
     }
 });
+
 
 module.exports = router;
