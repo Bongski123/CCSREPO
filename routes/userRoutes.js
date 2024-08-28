@@ -46,7 +46,8 @@ router.get('/users/all', async(req, res) =>{
 
     try {
         const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
-        const [rows] = await db.promise().execute(getAllUsersQuery);
+        const [rows] = await db.execute(getAllUsersQuery);
+
 
         res.status(200).json({ users: rows });
     } catch (error) {
