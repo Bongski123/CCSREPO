@@ -77,9 +77,9 @@ app.use(pdfRoutes);
 
 app.use(googleRoutes);
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../../uploads')));
 
-app.use('/main/static', express.static(path.join(__dirname, 'public')));
+
 
 
 
