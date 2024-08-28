@@ -5,22 +5,32 @@ const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
 
+// Define the upload path
+const uploadPath = path.join(__dirname, '../public/pdfs');
+
+// Ensure the directory exists
+if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath, { recursive: true });
+}
+
+// Set up multer storage configuration
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-      cb(null, "./public/pdfs");
+        cb(null, uploadPath);
     },
     filename: function(req, file, cb) {
-      cb(null, `${Date.now()}_${file.originalname}`);
+        cb(null, `${Date.now()}_${file.originalname}`);
     }
-  });
-  
-  const upload = multer({ storage });
-  
-  router.post('/upload', upload.single('file'), (req, res) => {
+});
+
+const upload = multer({ storage });
+
+router.post('/upload', upload.single('file'), (req, res) => {
     console.log(req.body);
     console.log(req.file);
     return res.json({ Status: "Success" });
-  });
+});
+
 router.post('/create', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
