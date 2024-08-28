@@ -4,36 +4,36 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
+// Directory where files will be uploaded
+const uploadDir = path.resolve(__dirname, '../../uploads');
 
-// Define the upload path to match the static serving path
-const uploadPath = path.join(__dirname, '../public');
-
-// Ensure the directory exists
-if (!fs.existsSync(uploadPath)) {
-    fs.mkdirSync(uploadPath, { recursive: true });
+// Ensure upload directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Set up multer storage configuration
+// Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        cb(null, uploadPath);
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
     },
-    filename: function(req, file, cb) {
-        cb(null, `${Date.now()}_${file.originalname}`);
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
+});
+
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
     }
-});
+};
 
-const upload = multer({ storage });
-
-// Endpoint to test file upload
-router.post('/upload', upload.single('file'), (req, res) => {
-    console.log(req.body);
-    console.log(req.file);
-    return res.json({ Status: "Success" });
-});
+const upload = multer({ storage, fileFilter });
 
 // Endpoint to create and insert research data
-router.post('/create', upload.single('file'), async (req, res) => {
+router.post('/uploadg', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
