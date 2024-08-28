@@ -79,10 +79,8 @@ app.use(googleRoutes);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use('/main/static', express.static(path.join(__dirname, 'public')));
 
-
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, './public')));
 
 
 

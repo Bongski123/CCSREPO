@@ -5,7 +5,7 @@ const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
 
-// Define the upload path
+// Define the upload path to match the static serving path
 const uploadPath = path.join(__dirname, '../public/pdfs');
 
 // Ensure the directory exists
@@ -25,12 +25,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Endpoint to test file upload
 router.post('/upload', upload.single('file'), (req, res) => {
     console.log(req.body);
     console.log(req.file);
     return res.json({ Status: "Success" });
 });
 
+// Endpoint to create and insert research data
 router.post('/create', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
