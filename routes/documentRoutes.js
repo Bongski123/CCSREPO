@@ -6,7 +6,7 @@ const router = express.Router();
 const db = require('../database/db');
 
 // Define the upload path to match the static serving path
-const uploadPath = path.join(__dirname, '../public/pdfs');
+const uploadPath = path.join(__dirname, 'public');
 
 // Ensure the directory exists
 if (!fs.existsSync(uploadPath)) {
