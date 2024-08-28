@@ -6,7 +6,7 @@ const router = express.Router();
 const db = require('../database/db');
 
 // Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, './uploads');
+const uploadDir = path.resolve(__dirname, '../uploads/files');
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
@@ -39,7 +39,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
         }
 
-        const { title, authors, categories, keywords, abstract } = req.body;
+        const { title, authors = [], categories = [], keywords = [], abstract } = req.body;
         const filename = req.file.filename;
 
         // Check if title already exists
@@ -52,56 +52,31 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename) VALUES (?, NOW(), ?, ?)', [title, abstract, filename]);
         const researchId = result.insertId;
 
-        // Insert authors
-        const insertAuthors = async (researchId, authors) => {
-            const authorNames = authors.split(',').map(name => name.trim());
-            for (const name of authorNames) {
-                let [author] =  await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
-                if (author.length === 0) {
-                    const [result] = await db.query().execute('INSERT INTO authors (author_name) VALUES (?)', [name]);
-                    author = { author_id: result.insertId };
+        // Helper function to insert data
+        const insertData = async (tableName, columnName, values) => {
+            const valuePromises = values.map(async (value) => {
+                let [result] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
+                if (result.length === 0) {
+                    [result] = await db.query(`INSERT INTO ${tableName} (${columnName}_name) VALUES (?)`, [value]);
+                    return result.insertId;
                 } else {
-                    author = author[0];
+                    return result[0][`${columnName}_id`];
                 }
-                await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
-            }
+            });
+            return Promise.all(valuePromises);
         };
 
-        await insertAuthors(researchId, authors);
+        // Insert authors
+        const authorIds = await insertData('authors', 'author', authors);
+        await Promise.all(authorIds.map(id => db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, id])));
 
         // Insert categories
-        const insertCategories = async (researchId, categories) => {
-            const categoryNames = categories.split(',').map(name => name.trim());
-            for (const name of categoryNames) {
-                let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
-                if (category.length === 0) {
-                    const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
-                    category = { category_id: result.insertId };
-                } else {
-                    category = category[0];
-                }
-                await db.promise().execute('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
-            }
-        };
-
-        await insertCategories(researchId, categories);
+        const categoryIds = await insertData('category', 'category', categories);
+        await Promise.all(categoryIds.map(id => db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, id])));
 
         // Insert keywords
-        const insertKeywords = async (researchId, keywords) => {
-            const keywordNames = keywords.split(',').map(name => name.trim());
-            for (const name of keywordNames) {
-                let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
-                if (keyword.length === 0) {
-                    const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
-                    keyword = { keyword_id: result.insertId };
-                } else {
-                    keyword = keyword[0];
-                }
-                await db.promise().execute('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
-            }
-        };
-
-        await insertKeywords(researchId, keywords);
+        const keywordIds = await insertData('keywords', 'keyword', keywords);
+        await Promise.all(keywordIds.map(id => db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, id])));
 
         res.status(201).json({ message: 'Document Uploaded Successfully' });
     } catch (error) {
