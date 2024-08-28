@@ -11,8 +11,8 @@ const router = express.Router();
 
 router.get('/categories/all', async(req, res) =>{
     try{
-        const getAllRolesQuery = 'SELECT category_id, category_name FROM category';
-        const[rows] = await db.promise().execute(getAllRolesQuery);
+        const getAllUsersQuery = 'SELECT category_id, category_name FROM category';
+        const [rows] = await db.query(getAllUsersQuery);
 
         res.status(200).json({category: rows});
     }catch(error){
