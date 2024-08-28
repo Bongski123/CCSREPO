@@ -118,7 +118,7 @@ router.get('/authors', async (req, res) => {
 router.get('/keywords', async(req, res) =>{
     try{
         const getAllKeywordquery = ' SELECT * FROM keywords';
-        const[rows] = await db.promise().execute(getAllKeywordquery);
+        const [rows] = await db.query(getAllKeywordquery);
 
         res.status(200).json({keywords: rows});
     }catch(error){
