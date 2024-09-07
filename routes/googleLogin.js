@@ -22,6 +22,11 @@ router.post('/google-login', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
 
+    // Check if the email belongs to allowed domains
+    if (!email.endsWith('@gbox.ncf.edu.ph') && !email.endsWith('@ncf.edu.ph')) {
+      return res.status(403).json({ error: 'Access denied: Only users with gbox.ncf.edu.ph or ncf.edu.ph emails can log in.' });
+    }
+
     // Determine role based on email domain
     let roleId = 4; // Default role for non-gbox.ncf.edu.ph users
 
@@ -68,3 +73,4 @@ router.post('/google-login', async (req, res) => {
 });
 
 module.exports = router;
+zss

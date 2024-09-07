@@ -16,7 +16,7 @@ router.get('/category/:category_id', async (req, res) => {
         }
 
         const getCategoryQuery = 'SELECT * FROM category WHERE category_id = ?';
-        const [category] = await db.promise().execute(getCategoryQuery, [category_id]);
+        const [category] = await db.query(getCategoryQuery, [category_id]);
 
         if (category.length === 0) {
             return res.status(404).json({ error: 'Category not found!' });
@@ -28,7 +28,7 @@ router.get('/category/:category_id', async (req, res) => {
             JOIN research_categories rc ON r.research_id = rc.research_id
             WHERE rc.category_id = ?
         `;
-        const [categoryDocuments] = await db.promise().execute(getCategoryDocumentsQuery, [category_id]);
+        const [categoryDocuments] = await db.query(getCategoryDocumentsQuery, [category_id]);
 
         res.status(200).json({ category: category[0], categoryDocuments });
 
@@ -48,7 +48,7 @@ router.get('/keywords/:keyword_id', async (req, res) => {
         }
 
         const getKeywordQuery = 'SELECT * FROM keywords WHERE keyword_id = ?';
-        const [keyword] = await db.promise().execute(getKeywordQuery, [keyword_id]);
+        const [keyword] = await db.query(getKeywordQuery, [keyword_id]);
 
         if (keyword.length === 0) {
             return res.status(404).json({ error: 'Keyword not found!' });
@@ -60,7 +60,7 @@ router.get('/keywords/:keyword_id', async (req, res) => {
             JOIN research_keywords rk ON r.research_id = rk.research_id
             WHERE rk.keyword_id = ?
         `;
-        const [keywordDocuments] = await db.promise().execute(getKeywordDocumentsQuery, [keyword_id]);
+        const [keywordDocuments] = await db.query(getKeywordDocumentsQuery, [keyword_id]);
 
         res.status(200).json({ keyword: keyword[0], keywordDocuments });
 
@@ -80,7 +80,7 @@ router.get('/authors/:author_id', async (req, res) => {
         }
 
         const getAuthorQuery = 'SELECT * FROM authors WHERE author_id = ?';
-        const [author] = await db.promise().execute(getAuthorQuery, [author_id]);
+        const [author] = await db.query(getAuthorQuery, [author_id]);
 
         if (author.length === 0) {
             return res.status(404).json({ error: 'Author not found!' });
@@ -92,7 +92,7 @@ router.get('/authors/:author_id', async (req, res) => {
             JOIN research_authors ra ON r.research_id = ra.research_id
             WHERE ra.author_id = ?
         `;
-        const [authorDocuments] = await db.promise().execute(getAuthorDocumentsQuery, [author_id]);
+        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [author_id]);
 
         res.status(200).json({ author: author[0], authorDocuments });
 
@@ -106,7 +106,7 @@ router.get('/authors/:author_id', async (req, res) => {
 router.get('/authors', async (req, res) => {
     try {
         const { query } = req.query;
-        const [authors] = await db.promise().query('SELECT author_name FROM authors WHERE author_name LIKE ?', [`%${query}%`]);
+        const [authors] = await db.query('SELECT author_name FROM authors WHERE author_name LIKE ?', [`%${query}%`]);
         res.json(authors.map(author => author.author_name));
     } catch (error) {
         console.error('Error fetching authors:', error);
