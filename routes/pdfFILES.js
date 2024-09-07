@@ -15,7 +15,7 @@ router.get('/pdf/:research_id', async (req, res) => {
         
         if (result.length > 0) {
             const fileName = result[0].filename; // Ensure this matches your database field name
-            const filePath = path.resolve(__dirname, '../uploads/pdfs', fileName);
+            const filePath = path.resolve(__dirname, '../public/uploads/pdfs', fileName);
 
             console.log('File path:', filePath);
 
