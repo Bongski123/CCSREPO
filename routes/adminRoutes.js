@@ -17,7 +17,7 @@ router.patch('/research/approve/:research_id', async (req, res) => {
         const researchId = req.params.research_id;
         
         const updateStatusQuery = 'UPDATE researches SET status = ? WHERE research_id = ?';
-        const [result] = await db.promise().execute(updateStatusQuery, ['approved', researchId]);
+        const [result] = await db.query(updateStatusQuery, ['approved', researchId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Research not found' });
@@ -36,7 +36,7 @@ router.patch('/research/reject/:research_id', async (req, res) => {
         const researchId = req.params.research_id;
         
         const updateStatusQuery = 'UPDATE researches SET status = ? WHERE research_id = ?';
-        const [result] = await db.promise().execute(updateStatusQuery, ['rejected', researchId]);
+        const [result] = await db.query(updateStatusQuery, ['rejected', researchId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Research not found' });
@@ -55,7 +55,7 @@ router.get('/research/:research_id', async (req, res) => {
         const researchId = req.params.research_id;
 
         const getResearchQuery = 'SELECT * FROM researches WHERE research_id = ?';
-        const [rows] = await db.promise().execute(getResearchQuery, [researchId]);
+        const [rows] = await db.query(getResearchQuery, [researchId]);
 
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Research not found' });
@@ -71,7 +71,7 @@ router.get('/research/:research_id', async (req, res) => {
 // View all researches
 router.get("/researches", async (req, res) => {
   try {
-    const [researches] = await db.promise().execute("SELECT * FROM researches");
+    const [researches] = await db.query("SELECT * FROM researches");
     res.status(200).json(researches);
   } catch (error) {
     console.error("Error getting researches:", error);
