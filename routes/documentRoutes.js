@@ -14,12 +14,16 @@ if (!fs.existsSync(uploadDir)) {
 // Directory where files will be uploaded
 const storage = multer.diskStorage({
     destination: function (req, file, callback) {
-        // Log the directory path to ensure it's correct
+        // Define a new subdirectory for uploads
+        const uploadDir = path.join(__dirname, 'uploads', 'documents');
+        // Ensure the new subdirectory exists or create it
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
         console.log('Uploading to directory:', uploadDir);
         callback(null, uploadDir);
     },
     filename: function (req, file, callback) {
-        // Add a unique suffix to avoid name conflicts
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const filename = uniqueSuffix + '-' + file.originalname;
         console.log('Generated filename:', filename);
@@ -27,7 +31,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// Set saved storage options, including file filter for PDFs
+// Set storage options, including file filter for PDFs
 const upload = multer({
     storage: storage,
     fileFilter: function (req, file, cb) {
@@ -45,7 +49,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     try {
         // If file is missing
         if (!req.file) {
-            return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
+            return res.status(400).json({ error: 'No file uploaded or invalid file type!' });
         }
 
         // Log file information
@@ -84,16 +88,16 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         await Promise.all(authorIds.map(id => db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, id])));
 
         // Insert categories
-        const categoryIds = await insertData('category', 'category', categories);
+        const categoryIds = await insertData('categories', 'category', categories);
         await Promise.all(categoryIds.map(id => db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, id])));
 
         // Insert keywords
         const keywordIds = await insertData('keywords', 'keyword', keywords);
         await Promise.all(keywordIds.map(id => db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, id])));
 
-        res.status(201).json({ message: 'Document Uploaded Successfully' });
+        res.status(201).json({ message: 'Document uploaded successfully' });
     } catch (error) {
-        console.error('Error Uploading Document:', error);
+        console.error('Error uploading document:', error);
         res.status(500).json({ error: `Upload Document Endpoint Error: ${error.message}` });
     }
 });
