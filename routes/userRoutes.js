@@ -8,9 +8,9 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role_id, program_id } = req.body;
+        const { name, email, password, role_id, program_id,institution } = req.body;
 
-        if (!name || !email || !password || !role_id || !program_id) {  
+        if (!name || !email || !password || !role_id || !program_id ||!institution) {  
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -30,8 +30,8 @@ router.post('/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const insertUserQuery = 'INSERT INTO users (name, email, password, role_id, program_id) VALUES (?, ?, ?, ?, ?)';
-        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id]);
+        const insertUserQuery = 'INSERT INTO users (name, email, password, role_id, program_id,institution) VALUES (?, ?, ?, ?, ?,?)';
+        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id,institution]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
 
 router.get('/users/all', async (req, res) => {
     try {
-        const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
+        const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email,u.institution, u.role_id, r.role_name, p.program_name u.institution FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
         const [rows] = await db.query(getAllUsersQuery);
 
         res.status(200).json({ users: rows });
