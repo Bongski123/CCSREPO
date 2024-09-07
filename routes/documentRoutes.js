@@ -4,30 +4,35 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
+
 // Directory where files will be uploaded
 const storage = multer.diskStorage({
     destination: function (req, file, callback) {
-        callback(null, __dirname + '/uploads');
+        const uploadPath = path.join(__dirname, 'uploads');
+        // Ensure directory exists, if not create it
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        callback(null, uploadPath);
     },
-    // Sets file(s) to be saved in uploads folder in same directory
     filename: function (req, file, callback) {
-        callback(null, file.originalname);
+        // Ensure unique filename by appending a timestamp
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        callback(null, uniqueSuffix + '-' + file.originalname);
     }
-    // Sets saved filename(s) to be original filename(s)
-  })
-  
-// Set saved storage options:
-const upload = multer({ storage: storage })
+});
 
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-        cb(null, true);
-    } else {
-        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
+// Set saved storage options
+const upload = multer({
+    storage: storage,
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type, only PDFs are allowed!'), false);
+        }
     }
-};
-
-
+});
 
 // Endpoint to create and insert research data
 router.post('/upload', upload.single('file'), async (req, res) => {
@@ -51,17 +56,14 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         // Helper function to insert data
         const insertData = async (tableName, columnName, values) => {
-            // Ensure values is an array
-            if (!Array.isArray(values)) {
-                values = [];
-            }
+            if (!Array.isArray(values)) values = []; // Ensure values is an array
             const valuePromises = values.map(async (value) => {
-                let [result] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
-                if (result.length === 0) {
-                    [result] = await db.query(`INSERT INTO ${tableName} (${columnName}_name) VALUES (?)`, [value]);
-                    return result.insertId;
+                const [existingValue] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
+                if (existingValue.length === 0) {
+                    const [inserted] = await db.query(`INSERT INTO ${tableName} (${columnName}_name) VALUES (?)`, [value]);
+                    return inserted.insertId;
                 } else {
-                    return result[0][`${columnName}_id`];
+                    return existingValue[0][`${columnName}_id`];
                 }
             });
             return Promise.all(valuePromises);
