@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
 
 router.get('/users/all', async (req, res) => {
     try {
-        const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email,u.institution, u.role_id, r.role_name, p.program_name u.institution FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
+        const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email,u.institution, u.role_id, r.role_name, p.program_name, u.institution FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
         const [rows] = await db.query(getAllUsersQuery);
 
         res.status(200).json({ users: rows });
