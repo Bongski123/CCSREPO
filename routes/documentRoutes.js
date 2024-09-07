@@ -5,22 +5,19 @@ const path = require('path');
 const router = express.Router();
 const db = require('../database/db');
 // Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, '../public/uploads/pdfs');
-
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
+    destination: function (req, file, callback) {
+        callback(null, __dirname + '/uploads');
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    },
-});
+    // Sets file(s) to be saved in uploads folder in same directory
+    filename: function (req, file, callback) {
+        callback(null, file.originalname);
+    }
+    // Sets saved filename(s) to be original filename(s)
+  })
+  
+// Set saved storage options:
+const upload = multer({ storage: storage })
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
@@ -30,7 +27,7 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-const upload = multer({ storage, fileFilter });
+
 
 // Endpoint to create and insert research data
 router.post('/upload', upload.single('file'), async (req, res) => {
