@@ -24,7 +24,7 @@ router.post('/google-login', async (req, res) => {
 
     // Check if the email belongs to allowed domains
     if (!email.endsWith('@gbox.ncf.edu.ph') && !email.endsWith('@ncf.edu.ph')) {
-      return res.status(403).json({ error: 'Access denied: Only users with gbox.ncf.edu.ph or ncf.edu.ph emails can log in.' });
+      return res.status(403).json({ error: 'Access denied: Only users with gbox.ncf.edu.ph or ncf.edu.ph emails can log in. PLEASE REGISTER' });
     }
 
     // Determine role based on email domain

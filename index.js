@@ -27,17 +27,23 @@ const adminRoutes = require("./routes/adminRoutes");
 const filterRoutes = require("./routes/filterRoutes");
 // Dashboard
 const dashboardRoutes = require("./routes/dashboardRoutes");
-
+const authorRoutes = require("./routes/Content Filtering/browseRoutes")
 
 const categoriesRoutes = require("./routes/categories");
 const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
 
+const Notification = require("./routes/UserDash");
+
 //google login
 
 const googleRoutes=require("./routes/googleLogin");
 
+
+//reset password
+
+const PasswordReset = require("./routes/PasswordReset");
 
 
 
@@ -45,7 +51,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-const PORT = process.env.PORT || 10062;
+const PORT = process.env.PORT || 9000;
 
 // Algorithm
 app.use("/search", searchRoutes);
@@ -54,7 +60,7 @@ app.use("/search", searchRoutes);
 app.use(roleRoutes);
 app.use(userRoutes);
 app.use(authRoutes);
-
+app.use(PasswordReset);
 
 // CRUD Documents
 app.use(documentRoutes);
@@ -62,9 +68,11 @@ app.use(adminRoutes);
 
 // Browse Filter
 app.use(filterRoutes);
+app.use(authorRoutes);
 
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);
+app.use(Notification);
 
 
 app.use(categoriesRoutes);

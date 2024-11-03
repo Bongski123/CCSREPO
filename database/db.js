@@ -1,10 +1,10 @@
 const mysql = require('mysql2/promise');
 const db = mysql.createPool({
-    host: 'mysql-181872-0.cloudclusters.net',
-    user: 'admin',
-    password: 'nkGLZXAo',
+    host: '127.0.0.1',
+    user: 'root',
+    password: 'root',
     database: 'ncfrepo_new',
-    port: 10062, // Default MySQL port
+
 
 });
   

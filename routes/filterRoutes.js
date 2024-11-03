@@ -3,8 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
 const {authenticateToken} = require('../authentication/middleware');
-
+const path = require('path');
 const router = express.Router();
+const { body, param, validationResult } = require('express-validator');
 
 // Browse by category
 router.get('/category/:category_id', async (req, res) => {
@@ -23,10 +24,34 @@ router.get('/category/:category_id', async (req, res) => {
         }
 
         const getCategoryDocumentsQuery = `
-            SELECT r.* 
-            FROM researches r
-            JOIN research_categories rc ON r.research_id = rc.research_id
-            WHERE rc.category_id = ?
+
+
+SELECT 
+    r.*,  
+    GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
+    GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
+    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
+FROM 
+    researches r
+LEFT JOIN 
+    research_authors ra ON r.research_id = ra.research_id
+LEFT JOIN 
+    authors a ON ra.author_id = a.author_id
+LEFT JOIN 
+    research_keywords rk ON r.research_id = rk.research_id  
+LEFT JOIN 
+    keywords k ON rk.keyword_id = k.keyword_id 
+LEFT JOIN 
+    research_categories rc ON r.research_id = rc.research_id
+LEFT JOIN 
+    category c ON rc.category_id = c.category_id 
+WHERE 
+    rc.category_id = ?  
+    AND r.status = 'approved' 
+GROUP BY 
+    r.research_id;
+
+    
         `;
         const [categoryDocuments] = await db.query(getCategoryDocumentsQuery, [category_id]);
 
@@ -37,6 +62,12 @@ router.get('/category/:category_id', async (req, res) => {
         res.status(500).json({ error: 'Categories Endpoint Error!' });
     }
 });
+
+
+
+
+
+
 
 // Browse by keywords
 router.get('/keywords/:keyword_id', async (req, res) => {
@@ -105,12 +136,32 @@ router.get('/authors/:author_id', async (req, res) => {
 // Endpoint to fetch authors based on query
 router.get('/authors', async (req, res) => {
     try {
-        const { query } = req.query;
-        const [authors] = await db.query('SELECT author_name FROM authors WHERE author_name LIKE ?', [`%${query}%`]);
-        res.json(authors.map(author => author.author_name));
-    } catch (error) {
-        console.error('Error fetching authors:', error);
-        res.status(500).json({ error: 'Failed to fetch authors' });
+        // SQL query to fetch authors with the count of researches they have published
+        const query = `
+            SELECT 
+                TRIM(BOTH '.' FROM a.author_name) AS authors_name,
+                COUNT(ra.research_id) AS documentCount
+            FROM 
+                authors a
+            LEFT JOIN 
+                research_authors ra ON a.author_id = ra.author_id
+            GROUP BY 
+                authors_name
+            ORDER BY 
+                authors_name ASC;
+        `;
+
+        // Execute the query
+        const [rows] = await db.query(query);
+
+        // Send the result as JSON
+        res.json({
+            authors: rows
+        });
+
+    } catch (err) {
+        console.error('Error fetching authors:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
@@ -133,23 +184,124 @@ router.get('/keywords', async(req, res) =>{
 router.get('/authors/:research_id', async (req, res) => {
     try {
       const researchId = req.params.research_id;
-      
+  
+      // Revised query to return the correct author names
       const getAuthorsQuery = `
-        SELECT authors.name 
-        FROM authors 
-        JOIN research_authors ON authors.author_id = research_authors.author_id 
-        WHERE research_authors.research_id = ?
+        SELECT a.author_name
+        FROM authors a
+        JOIN research_authors ra ON a.author_id = ra.author_id
+        WHERE ra.research_id = ?
       `;
+  
+      // Using `db.promise()` for async/await
       const [rows] = await db.promise().execute(getAuthorsQuery, [researchId]);
   
-      res.status(200).json(rows.map(row => row.name));
+      // Check if rows is empty
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'No authors found for this research.' });
+      }
+  
+      // Log authors fetched for debugging
+      console.log('Authors fetched:', rows);
+  
+      // Respond with an array of author names
+      res.status(200).json(rows);
     } catch (error) {
-      console.error('Error fetching authors:', error);
+      // More specific logging for debugging purposes
+      console.error('Error fetching authors:', error.message);
       res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+  
+  
+
+
+// Serve static files (for PDFs)
+router.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Endpoint to fetch an author and their researches
+router.get('/authors/:authorId/researches', async (req, res) => {
+    const { authorId } = req.params;
+    
+    try {
+        // SQL query to get author details
+        const [authorRows] = await db.query('SELECT * FROM authors WHERE author_id = ?', [authorId]);
+        
+        if (authorRows.length === 0) {
+            return res.status(404).json({ message: 'Author not found' });
+        }
+
+        const author = authorRows[0];
+
+        // SQL query to get the researches by the author
+        const [researchRows] = await db.query(`
+            SELECT r.research_id, r.title, r.abstract, r.filename
+            FROM researches r
+            JOIN research_authors ra ON r.research_id = ra.research_id
+            WHERE ra.author_id = ?
+        `, [authorId]);
+
+        res.json({
+            author: author,
+            researches: researchRows
+        });
+
+    } catch (err) {
+        console.error('Error fetching author or researches:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+
+
+router.get('/authors/:authorId/papers', async (req, res) => {
+    const { authorId } = req.params;
+  
+    try {
+      const [rows] = await db.query(`
+        SELECT * FROM researches
+        JOIN research_authors ON researches.research_id = research_authors.research_id
+        WHERE research_authors.author_id = ?
+      `, [authorId]);
+  
+      res.json({ papers: rows });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 
 
+  router.get(
+    '/user/researches/:userId',
+    [
+      // Validate userId to ensure it's numeric (assuming userId is a number)
+      param('userId').isNumeric().withMessage('Invalid user ID format. It should be a number.'),
+    ],
+    async (req, res) => {
+      // Handle validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const { userId } = req.params;
+  
+      const query = 'SELECT * FROM researches WHERE uploader_id = ?';
+  
+      try {
+        const [results] = await db.query(query, [userId]);
+  
+        if (results.length === 0) {
+          return res.status(404).json({ message: 'No research papers found for this user.' });
+        }
+  
+        res.status(200).json({ message: 'Research papers retrieved successfully.', data: results });
+      } catch (err) {
+        res.status(500).json({ message: 'Error fetching research papers', error: err.message });
+      }
+    }
+  );  
   
   
 

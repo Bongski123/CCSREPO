@@ -1,62 +1,57 @@
-const express = require('express');
+const express = require("express");
+const db = require("../database/db");
+const {
+  authenticateToken,
+  isAdmin,
+  isNCFUser,
+  isNotNCFUser,
+} = require("../authentication/middleware");
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
-const db = require('../database/db');
 
-// Ensure the directory exists or create it
-const uploadDir = path.join(__dirname, 'uploads');
+// Directory where files will be uploaded
+const uploadDir = path.resolve(__dirname, './uploads/documents');
+
+// Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Directory where files will be uploaded
+// Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
-    destination: function (req, file, callback) {
-        // Define a new subdirectory for uploads
-        const uploadDir = path.join(__dirname, 'uploads', 'documents');
-        // Ensure the new subdirectory exists or create it
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        console.log('Uploading to directory:', uploadDir);
-        callback(null, uploadDir);
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
     },
-    filename: function (req, file, callback) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const filename = uniqueSuffix + '-' + file.originalname;
-        console.log('Generated filename:', filename);
-        callback(null, filename);
-    }
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
 });
 
-// Set storage options, including file filter for PDFs
-const upload = multer({
-    storage: storage,
-    fileFilter: function (req, file, cb) {
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            console.log('Invalid file type:', file.mimetype);
-            cb(new Error('Invalid file type, only PDFs are allowed!'), false);
-        }
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
     }
-});
+};
 
-// Endpoint to handle file upload and research data insertion
+const upload = multer({ storage, fileFilter });
+
 router.post('/upload', upload.single('file'), async (req, res) => {
     try {
-        // If file is missing
         if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded or invalid file type!' });
+            return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
         }
 
-        // Log file information
-        console.log('File uploaded:', req.file);
-
-        const { title, authors = [], categories = [], keywords = [], abstract } = req.body;
+        const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
         const filename = req.file.filename;
+
+        // Validate uploader_id (you may want to add more validation)
+        if (!uploader_id || isNaN(uploader_id)) {
+            return res.status(400).json({ error: 'Invalid uploader ID!' });
+        }
 
         // Check if title already exists
         const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
@@ -64,41 +59,65 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(409).json({ error: 'Document with this title already exists!' });
         }
 
-        // Insert research data into the database
-        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename) VALUES (?, NOW(), ?, ?)', [title, abstract, filename]);
+        // Insert research
+        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id) VALUES (?, NOW(), ?, ?, ?)', [title, abstract, filename, uploader_id]);
         const researchId = result.insertId;
 
-        // Helper function to insert authors, categories, and keywords
-        const insertData = async (tableName, columnName, values) => {
-            if (!Array.isArray(values)) values = [];
-            const valuePromises = values.map(async (value) => {
-                const [existingValue] = await db.query(`SELECT ${columnName}_id FROM ${tableName} WHERE ${columnName}_name = ?`, [value]);
-                if (existingValue.length === 0) {
-                    const [inserted] = await db.query(`INSERT INTO ${tableName} (${columnName}_name) VALUES (?)`, [value]);
-                    return inserted.insertId;
+        // Insert authors
+        const insertAuthors = async (researchId, authors) => {
+            const authorNames = authors.split(',').map(name => name.trim());
+            for (const name of authorNames) {
+                let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
+                if (author.length === 0) {
+                    const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [name]);
+                    author = { author_id: result.insertId };
                 } else {
-                    return existingValue[0][`${columnName}_id`];
+                    author = author[0];
                 }
-            });
-            return Promise.all(valuePromises);
+                await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+            }
         };
 
-        // Insert authors
-        const authorIds = await insertData('authors', 'author', authors);
-        await Promise.all(authorIds.map(id => db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, id])));
+        await insertAuthors(researchId, authors);
 
         // Insert categories
-        const categoryIds = await insertData('categories', 'category', categories);
-        await Promise.all(categoryIds.map(id => db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, id])));
+        const insertCategories = async (researchId, categories) => {
+            const categoryNames = categories.split(',').map(name => name.trim());
+            for (const name of categoryNames) {
+                let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
+                if (category.length === 0) {
+                    const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
+                    category = { category_id: result.insertId };
+                } else {
+                    category = category[0];
+                }
+                await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
+            }
+        };
+
+        await insertCategories(researchId, categories);
 
         // Insert keywords
-        const keywordIds = await insertData('keywords', 'keyword', keywords);
-        await Promise.all(keywordIds.map(id => db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, id])));
+        const insertKeywords = async (researchId, keywords) => {
+            const keywordNames = keywords.split(',').map(name => name.trim());
+            for (const name of keywordNames) {
+                let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+                if (keyword.length === 0) {
+                    const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+                    keyword = { keyword_id: result.insertId };
+                } else {
+                    keyword = keyword[0];
+                }
+                await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
+            }
+        };
 
-        res.status(201).json({ message: 'Document uploaded successfully' });
+        await insertKeywords(researchId, keywords);
+
+        res.status(201).json({ message: 'Document Uploaded Successfully' });
     } catch (error) {
-        console.error('Error uploading document:', error);
-        res.status(500).json({ error: `Upload Document Endpoint Error: ${error.message}` });
+        console.error('Error Upload Document:', error);
+        res.status(500).json({ error: 'Upload Document Endpoint Error!' });
     }
 });
 

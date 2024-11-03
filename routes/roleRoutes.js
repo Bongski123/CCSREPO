@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/roles/all', async(req, res) =>{
     try{
         const getAllRolesQuery = 'SELECT role_id, role_name FROM roles';
-        const[rows] = await db.promise().execute(getAllRolesQuery);
+        const[rows] = await  db.query(getAllRolesQuery);
 
         res.status(200).json({roles: rows});
     }catch(error){
