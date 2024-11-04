@@ -1,8 +1,5 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const db = require('../database/db');
-const {authenticateToken} = require('../authentication/middleware');
 
 const router = express.Router();
 
@@ -10,17 +7,15 @@ const router = express.Router();
 
 router.get('/notifications/:user_id', async (req, res) => {
     try {
-        const { user_id } = req.params; // Extract user_id from the request parameters
+        const { user_id } = req.params;
 
-        // Query to fetch notifications for the specified user
         const query = 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC';
-        const [notifications] = await db.query(query, [user_id]); // Use user_id here
+        const [notifications] = await db.query(query, [user_id]);
 
         if (notifications.length === 0) {
             return res.status(404).json({ message: 'No notifications found for this user.' });
         }
 
-        // Send the notifications as a response
         res.status(200).json(notifications);
     } catch (error) {
         console.error('Error retrieving notifications:', error);
@@ -31,7 +26,7 @@ router.get('/notifications/:user_id', async (req, res) => {
 // Example route for rejecting a research submission
 router.post('/reject-research/:research_id', async (req, res) => {
     const { research_id } = req.params;
-    const { user_id } = req.body; // Assuming you send user_id in the body
+    const { user_id } = req.body;
 
     try {
         await rejectResearchSubmission(research_id, user_id);
@@ -42,12 +37,10 @@ router.post('/reject-research/:research_id', async (req, res) => {
     }
 });
 
-
 // Endpoint to mark notifications as read
 router.post('/notifications/opened', (req, res) => {
-    const { userId } = req.body; // Get userId from the request body
+    const { userId } = req.body;
 
-    // Update the notifications to mark them as read for the specified user
     const query = 'UPDATE notifications SET opened = 1 WHERE user_id = ? AND opened = 0';
 
     db.query(query, [userId], (err, result) => {
@@ -58,9 +51,6 @@ router.post('/notifications/opened', (req, res) => {
         return res.status(200).json({ message: 'Notifications marked as read', affectedRows: result.affectedRows });
     });
 });
-
-
-
 
 router.post('/collection/add', async (req, res) => {
     const { user_id, research_id } = req.body;
@@ -80,9 +70,6 @@ router.post('/collection/add', async (req, res) => {
     }
 });
 
-
-
-
 router.get('/collections/:userId', async (req, res) => {
     const { userId } = req.params;
 
@@ -92,10 +79,34 @@ router.get('/collections/:userId', async (req, res) => {
 
     try {
         const query = `
-            SELECT r.research_id, r.title
-            FROM collections c
-            JOIN researches r ON c.research_id = r.research_id
-            WHERE c.user_id = ?`;
+   SELECT 
+    r.research_id, 
+    r.title,
+    r.abstract, 
+    GROUP_CONCAT(DISTINCT cat.category_name) AS category,  
+    GROUP_CONCAT(DISTINCT kw.keyword_name) AS keywords,
+    GROUP_CONCAT(DISTINCT a.author_name) AS authors
+FROM 
+    collections c
+JOIN 
+    researches r ON c.research_id = r.research_id
+LEFT JOIN 
+    research_categories rc ON r.research_id = rc.research_id
+LEFT JOIN 
+    category cat ON rc.category_id = cat.category_id
+LEFT JOIN 
+    research_keywords rk ON r.research_id = rk.research_id
+LEFT JOIN 
+    keywords kw ON rk.keyword_id = kw.keyword_id
+LEFT JOIN 
+    research_authors ra ON r.research_id = ra.research_id
+LEFT JOIN 
+    authors a ON ra.author_id = a.author_id
+WHERE 
+    c.user_id = ?
+GROUP BY 
+    r.research_id, r.title;
+`;
 
         const collections = await db.query(query, [userId]);
 
@@ -118,14 +129,12 @@ router.delete('/collection/remove/:userId/:researchId', async (req, res) => {
     }
 
     try {
-        // Query to delete the collection entry
         const query = `
             DELETE FROM collections
             WHERE user_id = ? AND research_id = ?`;
 
         const result = await db.query(query, [userId, researchId]);
 
-        // Check if any row was affected (deleted)
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Collection item not found.' });
         }
@@ -137,9 +146,33 @@ router.delete('/collection/remove/:userId/:researchId', async (req, res) => {
     }
 });
 
+// Endpoint to fetch total downloads, citations, and researches for a specific uploader
+router.get('/user/dashboard', async (req, res) => {
+    const userId = req.query.user_id; // Get userId from the query parameters
 
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID not provided.' });
+    }
+
+    try {
+        const query = `
+            SELECT 
+                COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
+                COALESCE(SUM(r.citeCount), 0) AS total_citations,
+                COALESCE(COUNT(r.research_id), 0) AS total_researches
+            FROM researches r
+            WHERE r.uploader_id = ?`;
+
+        const [results] = await db.query(query, [userId]);
+
+        res.json({
+            total_downloads: results[0].total_downloads,
+            total_citations: results[0].total_citations,
+            total_researches: results[0].total_researches,
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 module.exports = router;
-
-
-
-

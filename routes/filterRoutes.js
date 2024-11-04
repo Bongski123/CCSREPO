@@ -102,29 +102,56 @@ router.get('/keywords/:keyword_id', async (req, res) => {
 });
 
 // Browse by authors
-router.get('/authors/:author_id', async (req, res) => {
+router.get('/authors/:authorId', async (req, res) => {
     try {
-        const author_id = req.params.author_id;
+        const authorId = req.params.authorId;
 
-        if (!author_id) {
+        // Validate authorId
+        if (!authorId) {
             return res.status(400).json({ error: 'Please provide author id' });
         }
 
+        // Query to get author details
         const getAuthorQuery = 'SELECT * FROM authors WHERE author_id = ?';
-        const [author] = await db.query(getAuthorQuery, [author_id]);
+        const [author] = await db.query(getAuthorQuery, [authorId]);
 
+        // Check if author exists
         if (author.length === 0) {
             return res.status(404).json({ error: 'Author not found!' });
         }
 
+        // Query to get documents related to the author
         const getAuthorDocumentsQuery = `
-            SELECT r.* 
-            FROM researches r
-            JOIN research_authors ra ON r.research_id = ra.research_id
-            WHERE ra.author_id = ?
+            SELECT 
+                r.*,  
+                GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
+                GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
+                GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
+            FROM 
+                researches r
+            LEFT JOIN 
+                research_authors ra ON r.research_id = ra.research_id
+            LEFT JOIN 
+                authors a ON ra.author_id = a.author_id
+            LEFT JOIN 
+                research_keywords rk ON r.research_id = rk.research_id  
+            LEFT JOIN 
+                keywords k ON rk.keyword_id = k.keyword_id 
+            LEFT JOIN 
+                research_categories rc ON r.research_id = rc.research_id
+            LEFT JOIN 
+                category c ON rc.category_id = c.category_id 
+            WHERE 
+                ra.author_id = ?  
+                AND r.status = 'approved' 
+            GROUP BY 
+                r.research_id;
         `;
-        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [author_id]);
 
+        // Fetch author's documents
+        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [authorId]);
+
+        // Return the response with author and their documents
         res.status(200).json({ author: author[0], authorDocuments });
 
     } catch (error) {
@@ -139,16 +166,18 @@ router.get('/authors', async (req, res) => {
         // SQL query to fetch authors with the count of researches they have published
         const query = `
             SELECT 
-                TRIM(BOTH '.' FROM a.author_name) AS authors_name,
-                COUNT(ra.research_id) AS documentCount
-            FROM 
-                authors a
-            LEFT JOIN 
-                research_authors ra ON a.author_id = ra.author_id
-            GROUP BY 
-                authors_name
-            ORDER BY 
-                authors_name ASC;
+    a.author_id,
+    TRIM(BOTH '.' FROM a.author_name) AS authors_name,
+    COUNT(ra.research_id) AS documentCount
+FROM 
+    authors a
+LEFT JOIN 
+    research_authors ra ON a.author_id = ra.author_id
+GROUP BY 
+    a.author_id, authors_name
+ORDER BY 
+    authors_name ASC;
+
         `;
 
         // Execute the query
@@ -165,18 +194,6 @@ router.get('/authors', async (req, res) => {
     }
 });
 
-// Endpoint to fetch keywords based on query
-router.get('/keywords', async(req, res) =>{
-    try{
-        const getAllKeywordquery = ' SELECT * FROM keywords';
-        const [rows] = await db.query(getAllKeywordquery);
-
-        res.status(200).json({keywords: rows});
-    }catch(error){
-        console.error('Error getting roles:', error);
-        res.status(500).json({error: 'All keywords Endpoint Error!'});
-    }
-});
 
 
 
@@ -260,9 +277,30 @@ router.get('/authors/:authorId/papers', async (req, res) => {
   
     try {
       const [rows] = await db.query(`
-        SELECT * FROM researches
-        JOIN research_authors ON researches.research_id = research_authors.research_id
-        WHERE research_authors.author_id = ?
+        SELECT 
+            r.*,  
+            GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
+            GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
+            GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS category
+        FROM 
+            researches r
+        LEFT JOIN 
+            research_authors ra ON r.research_id = ra.research_id
+        LEFT JOIN 
+            authors a ON ra.author_id = a.author_id
+        LEFT JOIN 
+            research_keywords rk ON r.research_id = rk.research_id  
+        LEFT JOIN 
+            keywords k ON rk.keyword_id = k.keyword_id 
+        LEFT JOIN 
+            research_categories rc ON r.research_id = rc.research_id
+        LEFT JOIN 
+            category c ON rc.category_id = c.category_id 
+        WHERE 
+            ra.author_id = ?  -- Filter by author_id
+            AND r.status = 'approved' 
+        GROUP BY 
+            r.research_id;
       `, [authorId]);
   
       res.json({ papers: rows });
