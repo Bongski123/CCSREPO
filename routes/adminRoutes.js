@@ -162,6 +162,21 @@ router.get('/total/downloads', async (req, res) => {
       res.status(500).send(err.message);
     }
   });
+  router.get('/user/research/:researchId/downloads', async (req, res) => {
+    const { researchId } = req.params; // Get the researchId from the request parameters
+    try {
+      const sql = 'SELECT SUM(downloadCount) AS total_downloads FROM researches WHERE research_id = ?'; // Change researchId if needed
+      const [result] = await db.query(sql, [researchId]); // Pass the researchId as a parameter
+      
+      if (result.length === 0) {
+        return res.status(404).send('Research not found.');
+      }
+      
+      res.json(result[0]); // Send the total downloads for the research
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
   
  // Route to get total citations
 router.get('/total/citations', async (req, res) => {

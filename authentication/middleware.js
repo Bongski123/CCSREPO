@@ -5,21 +5,21 @@ require('dotenv').config();
 
 // Middleware to protect routes
 const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Extract token from header
+    const token = req.headers['authorization'];
+  
     if (!token) {
-        return res.status(403).json({ message: 'No token provided.' });
+      return res.status(403).json({ error: 'No token provided' });
     }
-
-    jwt.verify(token, 'your_secret_key', (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ message: 'Failed to authenticate token.' });
-        }
-
-        req.user = decoded; // Add user information to request object
-        next();
+  
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ error: 'Unauthorized or token expired' });
+      }
+  
+      req.userId = decoded.userId;
+      next();
     });
-};
-
+  };
 const isAdmin = (req, res, next) => {
     if (req.user && req.user.role_id === 1) {
         return next();

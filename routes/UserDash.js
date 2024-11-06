@@ -3,7 +3,19 @@ const db = require('../database/db');
 
 const router = express.Router();
 
-// ----ROLES DATA----
+
+const getGeolocation = async (ip) => {
+    const apiToken = 'YOUR_API_TOKEN'; // Replace with your actual API token
+    try {
+      const response = await axios.get(`https://ipinfo.io/${ip}/json?token=${apiToken}`);
+      return response.data; // This will contain the location information
+    } catch (error) {
+      console.error('Error fetching geolocation:', error);
+      return null;
+    }
+  };
+  
+
 
 router.get('/notifications/:user_id', async (req, res) => {
     try {
@@ -159,7 +171,8 @@ router.get('/user/dashboard', async (req, res) => {
             SELECT 
                 COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
                 COALESCE(SUM(r.citeCount), 0) AS total_citations,
-                COALESCE(COUNT(r.research_id), 0) AS total_researches
+                COALESCE(COUNT(r.research_id), 0) AS total_researches,
+                COALESCE(SUM(r.viewCount), 0) AS total_views  -- Include total views
             FROM researches r
             WHERE r.uploader_id = ?`;
 
@@ -169,10 +182,126 @@ router.get('/user/dashboard', async (req, res) => {
             total_downloads: results[0].total_downloads,
             total_citations: results[0].total_citations,
             total_researches: results[0].total_researches,
+            total_views: results[0].total_views,  // Add total views to the response
         });
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+
+// Route to get daily downloads for an individual uploader
+router.get('/user/daily/downloads', async (req, res) => {
+    const userId = req.query.userId; // Get the userId from the query parameters
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT DATE(publish_date) AS date, SUM(downloadCount) AS downloads 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY DATE(publish_date) 
+        ORDER BY DATE(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching daily downloads:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  // Route to get daily citations for an individual uploader
+  router.get('/user/daily/citations', async (req, res) => {
+    const userId = req.query.userId; // Get the userId from the query parameters
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT DATE(publish_date) AS date, SUM(citeCount) AS citations 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY DATE(publish_date) 
+        ORDER BY DATE(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching daily citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+
+  // New route for daily views
+router.get('/user/daily/views', async (req, res) => {
+    const userId = req.query.userId; // Get the userId from the query parameters
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT DATE(publish_date) AS date, SUM(viewCount) AS views 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY DATE(publish_date) 
+        ORDER BY DATE(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching daily views:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
+
+
+  router.get('/user/location', async (req, res) => {
+    try {
+        const userIPResponse = await axios.get('https://api.ipify.org?format=json');
+        const { ip } = userIPResponse.data;
+
+        const locationResponse = await axios.get(`https://ipinfo.io/${ip}/json?token=${process.env.IPINFO_TOKEN}`);
+        res.json(locationResponse.data);
+    } catch (error) {
+        console.error('Error fetching location:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+
+
+router.post('/research/view/:research_id', async (req, res) => {
+    try {
+        const researchId = req.params.research_id;
+
+        // SQL query to increment the view count
+        const incrementViewQuery = 'UPDATE researches SET viewCount = viewCount + 1 WHERE research_id = ?';
+        const [result] = await db.query(incrementViewQuery, [researchId]);
+
+        // Check if the research article was found and updated
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Research not found' });
+        }
+
+        res.status(200).json({ message: 'View count updated successfully' });
+    } catch (error) {
+        console.error('Error updating view count:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+  
+
 module.exports = router;

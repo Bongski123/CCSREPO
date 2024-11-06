@@ -43,7 +43,7 @@ router.post('/google-login', async (req, res) => {
     if (user) {
       // User exists, generate JWT token
       const accessToken = jwt.sign(
-        { userId: user.user_id, email: user.email, roleId: user.role_id },
+        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id  },
         JWT_SECRET,
         { expiresIn: '1h' }
       );
@@ -59,7 +59,7 @@ router.post('/google-login', async (req, res) => {
 
       // Generate JWT token for the new user
       const accessToken = jwt.sign(
-        { userId: newUserId, email, roleId },
+        { userId: newUserId, email, roleId, name },
         JWT_SECRET,
         { expiresIn: '1h' }
       );

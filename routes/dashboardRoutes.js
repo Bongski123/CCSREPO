@@ -83,7 +83,7 @@ router.post('/total/citations', (req, res) => {
 });
 
 
-// Downloads Count Management
+
 // Increment download count for each document
 router.post('/downloads/:research_id', (req, res) => {
 
@@ -125,7 +125,6 @@ router.get('/downloads/:research_id', (req, res) => {
 // Get the download count of all documents
 router.get('/downloads', (req, res) => {
 
-    // Get the citation count from the database
     const getDownloadedQuery = 'SELECT research_id, downloadCount FROM researches';
 
     db.query(getDownloadedQuery, (error, result) => {

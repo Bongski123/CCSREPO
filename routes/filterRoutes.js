@@ -108,11 +108,11 @@ router.get('/authors/:authorId', async (req, res) => {
 
         // Validate authorId
         if (!authorId) {
-            return res.status(400).json({ error: 'Please provide author id' });
+            return res.status(400).json({ error: 'Please provide author ID' });
         }
 
-        // Query to get author details
-        const getAuthorQuery = 'SELECT * FROM authors WHERE author_id = ?';
+        // Query to get author ID and author name
+        const getAuthorQuery = 'SELECT author_id, author_name FROM authors WHERE author_id = ?';
         const [author] = await db.query(getAuthorQuery, [authorId]);
 
         // Check if author exists
@@ -120,43 +120,14 @@ router.get('/authors/:authorId', async (req, res) => {
             return res.status(404).json({ error: 'Author not found!' });
         }
 
-        // Query to get documents related to the author
-        const getAuthorDocumentsQuery = `
-            SELECT 
-                r.*,  
-                GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
-                GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-                GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
-            FROM 
-                researches r
-            LEFT JOIN 
-                research_authors ra ON r.research_id = ra.research_id
-            LEFT JOIN 
-                authors a ON ra.author_id = a.author_id
-            LEFT JOIN 
-                research_keywords rk ON r.research_id = rk.research_id  
-            LEFT JOIN 
-                keywords k ON rk.keyword_id = k.keyword_id 
-            LEFT JOIN 
-                research_categories rc ON r.research_id = rc.research_id
-            LEFT JOIN 
-                category c ON rc.category_id = c.category_id 
-            WHERE 
-                ra.author_id = ?  
-                AND r.status = 'approved' 
-            GROUP BY 
-                r.research_id;
-        `;
-
-        // Fetch author's documents
-        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [authorId]);
-
-        // Return the response with author and their documents
-        res.status(200).json({ author: author[0], authorDocuments });
+        // Respond with author details
+        res.json({
+            author: author[0], // Return only author_id and author_name
+        });
 
     } catch (error) {
-        console.error('Error getting documents from an author:', error);
-        res.status(500).json({ error: 'Authors Endpoint Error!' });
+        console.error('Error fetching author details:', error); // Log the error for debugging
+        res.status(500).json({ message: 'Failed to fetch author details', error: error.message });
     }
 });
 
@@ -281,7 +252,7 @@ router.get('/authors/:authorId/papers', async (req, res) => {
             r.*,  
             GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
             GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-            GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS category
+            GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories
         FROM 
             researches r
         LEFT JOIN 
@@ -303,11 +274,14 @@ router.get('/authors/:authorId/papers', async (req, res) => {
             r.research_id;
       `, [authorId]);
   
-      res.json({ papers: rows });
+      // If no papers are found, you might want to return an empty array
+      res.json({ papers: rows.length ? rows : [] });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('Error fetching papers:', error); // Log the error for debugging
+      res.status(500).json({ message: 'Failed to fetch papers', error: error.message });
     }
   });
+  
 
 
   router.get(

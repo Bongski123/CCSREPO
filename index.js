@@ -51,7 +51,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-const PORT = process.env.PORT || 9000;
+const PORT = process.env.PORT || 10121;
 
 // Algorithm
 app.use("/search", searchRoutes);
