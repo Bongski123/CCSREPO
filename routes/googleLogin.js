@@ -4,7 +4,7 @@ const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
 
 const router = express.Router();
-const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
+const GOOGLE_CLIENT_ID = '1036498422383-tqe5q6d4sousal4ffj6vv79hqpm5qta1.apps.googleusercontent.com'; // Hardcoded Google Client ID
 const JWT_SECRET = 'Nhel-secret-key'; // Hardcoded JWT Secret Key
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
