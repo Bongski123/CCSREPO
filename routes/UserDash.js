@@ -172,7 +172,7 @@ router.get('/user/dashboard', async (req, res) => {
                 COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
                 COALESCE(SUM(r.citeCount), 0) AS total_citations,
                 COALESCE(COUNT(r.research_id), 0) AS total_researches,
-                COALESCE(SUM(r.viewCount), 0) AS total_views  -- Include total views
+                COALESCE(SUM(r.viewCount), 0) AS total_views  
             FROM researches r
             WHERE r.uploader_id = ?`;
 

@@ -136,7 +136,7 @@ router.get('/authors', async (req, res) => {
     try {
         // SQL query to fetch authors with the count of researches they have published
         const query = `
-            SELECT 
+     SELECT 
     a.author_id,
     TRIM(BOTH '.' FROM a.author_name) AS authors_name,
     COUNT(ra.research_id) AS documentCount
@@ -144,6 +144,10 @@ FROM
     authors a
 LEFT JOIN 
     research_authors ra ON a.author_id = ra.author_id
+LEFT JOIN 
+    researches r ON ra.research_id = r.research_id
+WHERE 
+    r.status = 'approved'  -- Only count researches with status 'approved'
 GROUP BY 
     a.author_id, authors_name
 ORDER BY 
