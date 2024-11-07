@@ -318,6 +318,36 @@ router.get('/authors/:authorId/papers', async (req, res) => {
       }
     }
   );  
+
+
+
+  app.put('/research/:researchId/abstract', (req, res) => {
+  const { researchId } = req.params; // Get the research ID from the URL
+  const { abstract } = req.body; // Get the new abstract from the request body
+
+  if (!abstract) {
+    return res.status(400).json({ message: 'Abstract is required' });
+  }
+
+  // SQL query to update the abstract in the database
+  const query = 'UPDATE researches SET abstract = ? WHERE research_id = ?';
+
+  db.query(query, [abstract, researchId], (err, result) => {
+    if (err) {
+      console.error('Error updating abstract:', err);
+      return res.status(500).json({ message: 'Error updating abstract' });
+    }
+
+    if (result.affectedRows > 0) {
+      return res.status(200).json({ message: 'Abstract updated successfully' });
+    } else {
+      return res.status(404).json({ message: 'Research not found' });
+    }
+  });
+});
+
+
+
   
   
 
