@@ -17,18 +17,36 @@ const getGeolocation = async (ip) => {
   
 
 
-router.get('/notifications/:user_id', async (req, res) => {
+  router.get('/notifications/:user_id',  async (req, res) => {
     try {
         const { user_id } = req.params;
 
-        const query = 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC';
-        const [notifications] = await db.query(query, [user_id]);
+        // SQL to get notifications with associated research
+        const query = `
+           SELECT 
+    notification_id,
+    notifications.message, 
+    notifications.created_at, 
+    notifications.opened, 
+    researches.research_id, 
+    researches.title, 
+    researches.abstract 
+FROM notifications
+LEFT JOIN researches ON notifications.research_id = researches.research_id
+WHERE notifications.user_id = ?
+ORDER BY notifications.created_at DESC;
+        `;
 
-        if (notifications.length === 0) {
-            return res.status(404).json({ message: 'No notifications found for this user.' });
-        }
+        db.query(query, [user_id], (err, results) => {
+            if (err) return res.status(500).send('Error fetching notifications');
 
-        res.status(200).json(notifications);
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'No notifications found for this user.' });
+            }
+
+            res.status(200).json(results);
+        });
+
     } catch (error) {
         console.error('Error retrieving notifications:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -297,6 +315,32 @@ router.post('/research/view/:research_id', async (req, res) => {
         res.status(200).json({ message: 'View count updated successfully' });
     } catch (error) {
         console.error('Error updating view count:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+router.get('/:user_id/papers', async (req, res) => {
+    try {
+        const { user_id } = req.params;
+        const { status } = req.query; // Get status from query params (approved, rejected)
+
+        if (!status || !['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status query parameter. Use "approved" or "rejected".' });
+        }
+
+        // Query papers based on user_id and status
+        const query = 'SELECT * FROM research_papers WHERE uploader_id = ? AND status = ? ORDER BY created_at DESC';
+        const [papers] = await db.query(query, [user_id, status]);
+
+        if (papers.length === 0) {
+            return res.status(404).json({ message: `No ${status} papers found for this user.` });
+        }
+
+        res.status(200).json(papers);
+    } catch (error) {
+        console.error('Error retrieving papers:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
