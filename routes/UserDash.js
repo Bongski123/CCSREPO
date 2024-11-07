@@ -34,6 +34,26 @@ const getGeolocation = async (ip) => {
     }
 });
 
+
+router.get('/notifications/:notificationId/researches',  (req, res) => {
+    const notificationId = req.params.notificationId;
+
+    // Query to fetch the research details associated with a specific notification
+    const query = `
+         SELECT r.research_id, r.title
+        FROM researches r 
+        JOIN notifications n ON n.research_id = r.research_id 
+        WHERE n.notification_id = ?`;
+        
+    db.query(query, [notificationId], (err, results) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error fetching researches' });
+        }
+        res.json(results);
+    });
+});
+
+
 // Example route for rejecting a research submission
 router.post('/reject-research/:research_id', async (req, res) => {
     const { research_id } = req.params;
