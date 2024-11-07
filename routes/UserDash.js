@@ -16,37 +16,18 @@ const getGeolocation = async (ip) => {
   };
   
 
-
-  router.get('/notifications/:user_id',  async (req, res) => {
+  router.get('/notifications/:user_id', async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { user_id } = req.params;
 
-        // SQL to get notifications with associated research
-        const query = `
-           SELECT 
-    notification_id,
-    notifications.message, 
-    notifications.created_at, 
-    notifications.opened, 
-    researches.research_id, 
-    researches.title, 
-    researches.abstract 
-FROM notifications
-LEFT JOIN researches ON notifications.research_id = researches.research_id
-WHERE notifications.user_id = ?
-ORDER BY notifications.created_at DESC;
-        `;
+        const query = 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC';
+        const [notifications] = await db.query(query, [user_id]);
 
-        db.query(query, [userId], (err, results) => {
-            if (err) return res.status(500).send('Error fetching notifications');
+        if (notifications.length === 0) {
+            return res.status(404).json({ message: 'No notifications found for this user.' });
+        }
 
-            if (results.length === 0) {
-                return res.status(404).json({ message: 'No notifications found for this user.' });
-            }
-
-            res.status(200).json(results);
-        });
-
+        res.status(200).json(notifications);
     } catch (error) {
         console.error('Error retrieving notifications:', error);
         res.status(500).json({ error: 'Internal Server Error' });
