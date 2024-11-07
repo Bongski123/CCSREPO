@@ -19,7 +19,7 @@ const getGeolocation = async (ip) => {
 
   router.get('/notifications/:user_id',  async (req, res) => {
     try {
-        const { user_id } = req.params;
+        const { userId } = req.params;
 
         // SQL to get notifications with associated research
         const query = `
@@ -37,7 +37,7 @@ WHERE notifications.user_id = ?
 ORDER BY notifications.created_at DESC;
         `;
 
-        db.query(query, [user_id], (err, results) => {
+        db.query(query, [userId], (err, results) => {
             if (err) return res.status(500).send('Error fetching notifications');
 
             if (results.length === 0) {
