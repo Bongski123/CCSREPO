@@ -22,18 +22,14 @@ router.post('/google-login', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
 
-    // Check if the email belongs to allowed domains
-    if (!email.endsWith('@gbox.ncf.edu.ph') && !email.endsWith('@ncf.edu.ph')) {
-      return res.status(403).json({ error: 'Access denied: Only users with gbox.ncf.edu.ph or ncf.edu.ph emails can log in. PLEASE REGISTER' });
-    }
-
+  
     // Determine role based on email domain
     let roleId = 4; // Default role for non-gbox.ncf.edu.ph users
 
     if (email.endsWith('@gbox.ncf.edu.ph')) {
-      roleId = 3; // Assign role 3 for gbox.ncf.edu.ph users (e.g., students)
+      roleId = 2; // Assign role 3 for gbox.ncf.edu.ph users (e.g., students)
     } else if (email.endsWith('@ncf.edu.ph')) {
-      roleId = 2; // Assign role 2 for ncf.edu.ph users (e.g., employees)
+      roleId = 3; // Assign role 2 for ncf.edu.ph users (e.g., employees)
     }
 
     // Check if the user already exists in the database
