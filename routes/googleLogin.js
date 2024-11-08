@@ -43,20 +43,28 @@ router.post('/google-login', async (req, res) => {
     if (user) {
       // User exists, generate JWT token
       const accessToken = jwt.sign(
-        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id },
+        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id  },
         JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      // Return user data with token
       res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
     } else {
-      // User does not exist, return the user information to prompt for registration
-      res.status(200).json({
-        userExists: false,
-        email,
-        name
-      });
+      // User does not exist, create new user with the determined role
+      const [result] = await db.query(
+        'INSERT INTO users (google_id, email, name, role_id) VALUES (?, ?, ?, ?)',
+        [googleId, email, name, roleId]
+      );
+      const newUserId = result.insertId;
+
+      // Generate JWT token for the new user
+      const accessToken = jwt.sign(
+        { userId: newUserId, email, roleId, name },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      res.status(200).json({ token: accessToken, userId: newUserId, roleId });
     }
   } catch (error) {
     console.error('Error during Google login:', error);
