@@ -4,8 +4,8 @@ const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
 
 const router = express.Router();
-const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
-const JWT_SECRET = 'Nhel-secret-key'; // Hardcoded JWT Secret Key
+const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com';
+const JWT_SECRET = 'Nhel-secret-key';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -50,8 +50,12 @@ router.post('/google-login', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error during Google login:', error);
-    return res.status(401).json({ error: 'Invalid Google token or error processing request' });
+    console.error('Error during Google login:', error.message);
+
+    // Return a more specific error message based on the error
+    return res.status(401).json({
+      error: error.message || 'Invalid Google token or error processing request'
+    });
   }
 });
 
