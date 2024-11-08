@@ -43,14 +43,20 @@ router.post('/google-login', async (req, res) => {
     if (user) {
       // User exists, generate JWT token
       const accessToken = jwt.sign(
-        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id  },
+        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id },
         JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      res.status(200).json({ token: accessToken, userId: user.user_id, roleId: user.role_id });
+      // Return response with the token and user info
+      return res.status(200).json({
+        token: accessToken,
+        userId: user.user_id,
+        roleId: user.role_id,
+        userExists: true // Add userExists flag
+      });
     } else {
-      // User does not exist, create new user with the determined role
+      // User does not exist, create a new user with the determined role
       const [result] = await db.query(
         'INSERT INTO users (google_id, email, name, role_id) VALUES (?, ?, ?, ?)',
         [googleId, email, name, roleId]
@@ -64,11 +70,17 @@ router.post('/google-login', async (req, res) => {
         { expiresIn: '1h' }
       );
 
-      res.status(200).json({ token: accessToken, userId: newUserId, roleId });
+      // Return response with the token and user info
+      return res.status(200).json({
+        token: accessToken,
+        userId: newUserId,
+        roleId,
+        userExists: false // Add userExists flag
+      });
     }
   } catch (error) {
     console.error('Error during Google login:', error);
-    res.status(401).json({ error: 'Invalid Google token or error processing request' });
+    return res.status(401).json({ error: 'Invalid Google token or error processing request' });
   }
 });
 
