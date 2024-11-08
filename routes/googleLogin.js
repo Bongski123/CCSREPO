@@ -22,16 +22,6 @@ router.post('/google-login', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
 
-  
-    // Determine role based on email domain
-    let roleId = 4; // Default role for non-gbox.ncf.edu.ph users
-
-    if (email.endsWith('@gbox.ncf.edu.ph')) {
-      roleId = 2; // Assign role 3 for gbox.ncf.edu.ph users (e.g., students)
-    } else if (email.endsWith('@ncf.edu.ph')) {
-      roleId = 3; // Assign role 2 for ncf.edu.ph users (e.g., employees)
-    }
-
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
@@ -49,29 +39,14 @@ router.post('/google-login', async (req, res) => {
         token: accessToken,
         userId: user.user_id,
         roleId: user.role_id,
-        userExists: true // Add userExists flag
+        userExists: true, // Indicate that the user already exists
       });
     } else {
-      // User does not exist, create a new user with the determined role
-      const [result] = await db.query(
-        'INSERT INTO users (google_id, email, name, role_id) VALUES (?, ?, ?, ?)',
-        [googleId, email, name, roleId]
-      );
-      const newUserId = result.insertId;
-
-      // Generate JWT token for the new user
-      const accessToken = jwt.sign(
-        { userId: newUserId, email, roleId, name },
-        JWT_SECRET,
-        { expiresIn: '1h' }
-      );
-
-      // Return response with the token and user info
+      // User does not exist, do not insert yet. Just return userExists flag.
       return res.status(200).json({
-        token: accessToken,
-        userId: newUserId,
-        roleId,
-        userExists: false // Add userExists flag
+        userExists: false, // Indicate that the user does not exist
+        email,
+        name,
       });
     }
   } catch (error) {
