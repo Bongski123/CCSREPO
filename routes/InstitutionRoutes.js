@@ -5,42 +5,22 @@ const router = express.Router();
 
 // Create a new institution
 router.post('/institutions', async (req, res) => {
-    const { name, email, password, program_id, institution, role_id } = req.body;
-
-    // Check if all required fields are present
-    if (!name || !email || !password || !program_id || !institution || !role_id) {
-        return res.status(400).json({ error: 'Missing required fields' });
+    const { institution_name } = req.body;
+    
+    if (!institution_name) {
+        return res.status(400).json({ message: 'Institution name is required' });
     }
 
     try {
-        let institutionId = institution;  // Default to provided institution_id
+        const createInstitutionQuery = 'INSERT INTO institution (institution_name) VALUES (?)';
+        const [result] = await db.query(createInstitutionQuery, [institution_name]);
 
-        // If institution is "Other", create a new institution
-        if (institution === "Other" && req.body.institution_name) {
-            const institutionName = req.body.institution_name;
-            
-            // Insert the new institution
-            const createInstitutionQuery = 'INSERT INTO institution (institution_name) VALUES (?)';
-            const [createInstitutionResult] = await db.query(createInstitutionQuery, [institutionName]);
-
-            // Use the new institution's ID
-            institutionId = createInstitutionResult.insertId;
-        }
-
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert the user with institution_id into the users table
-        const insertUserQuery = 'INSERT INTO users (name, email, password, program_id, institution_id, role_id) VALUES (?, ?, ?, ?, ?, ?)';
-        const [insertUserResult] = await db.query(insertUserQuery, [name, email, hashedPassword, program_id, institutionId, role_id]);
-
-        res.status(201).json({ message: 'User Registered Successfully', user_id: insertUserResult.insertId });
+        res.status(201).json({ message: 'Institution created successfully', institution_id: result.insertId });
     } catch (error) {
-        console.error('Error registering user:', error);
-        res.status(500).json({ error: 'User Registration Endpoint Error!', details: error.message });
+        console.error('Error creating institution:', error);
+        res.status(500).json({ error: 'Institution creation failed' });
     }
 });
-
 // Retrieve all institutions
 router.get('/institutions/all', async (req, res) => {
     try {
