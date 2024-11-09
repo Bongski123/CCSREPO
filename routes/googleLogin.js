@@ -3,14 +3,18 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
 
+
 const router = express.Router();
-const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com';
-const JWT_SECRET = 'Nhel-secret-key';
+const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
+const JWT_SECRET = 'Nhel-secret-key'; // Hardcoded JWT Secret Key
+
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+
 router.post('/google-login', async (req, res) => {
   const { id_token } = req.body;
+
 
   try {
     // Verify Google token
@@ -19,12 +23,15 @@ router.post('/google-login', async (req, res) => {
       audience: GOOGLE_CLIENT_ID,
     });
 
+
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
+
 
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
+
 
     if (user) {
       // User exists, generate JWT token
@@ -33,6 +40,7 @@ router.post('/google-login', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '1h' }
       );
+
 
       // Return response with the token and user info
       return res.status(200).json({
@@ -50,13 +58,10 @@ router.post('/google-login', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error during Google login:', error.message);
-
-    // Return a more specific error message based on the error
-    return res.status(401).json({
-      error: error.message || 'Invalid Google token or error processing request'
-    });
+    console.error('Error during Google login:', error);
+    return res.status(401).json({ error: 'Invalid Google token or error processing request' });
   }
 });
+
 
 module.exports = router;

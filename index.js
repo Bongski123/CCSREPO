@@ -36,6 +36,7 @@ const keywordsRoutes = require("./routes/keywords");
 
 const Notification = require("./routes/UserDash");
 
+const InstitutionRoutes =require("./routes/InstitutionRoutes")
 //google login
 
 const googleRoutes=require("./routes/googleLogin");
@@ -78,6 +79,7 @@ app.use(Notification);
 app.use(categoriesRoutes);
 
 app.use(keywordsRoutes);
+app.use(InstitutionRoutes);
 
 app.use(pdfRoutes);
 
@@ -88,6 +90,11 @@ app.use(googleRoutes);
 app.use(express.static(path.join(__dirname, '../../uploads')));
 
 
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
 
 
 
