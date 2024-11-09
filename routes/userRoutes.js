@@ -13,8 +13,8 @@ router.post('/register', async (req, res) => {
 
         const { name, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
 
-        // Check for missing required fields
-        if (!name || !email || !password || !role_id || !program_id || (!institution_id && !new_institution_name)) {
+        // Check for missing required fields (allow program_id to be null)
+        if (!name || !email || !password || !role_id || !institution_id && !new_institution_name) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -52,6 +52,11 @@ router.post('/register', async (req, res) => {
 
             // Use the inserted program's ID
             finalProgramId = insertedProgramResult.insertId;
+        }
+
+        // If program_id is not provided (i.e., null), ensure that it's set to null for database insertion
+        if (program_id === '' || program_id === null) {
+            finalProgramId = null;
         }
 
         // Hash the password before saving it to the database
