@@ -8,9 +8,9 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role_id, program_id,institution } = req.body;
+        const { name, email, password, role_id, program_id, institution_id } = req.body;
 
-        if (!name || !email || !password || !role_id || !program_id ||!institution) {  
+        if (!name || !email || !password || !role_id || !program_id || !institution_id) {  
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -28,10 +28,15 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
+        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const insertUserQuery = 'INSERT INTO users (name, email, password, role_id, program_id,institution) VALUES (?, ?, ?, ?, ?,?)';
-        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id,institution]);
+        // Insert new user into the database
+        const insertUserQuery = `
+            INSERT INTO users (name, email, password, role_id, program_id, institution_id) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id, institution_id]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
