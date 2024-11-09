@@ -5,23 +5,15 @@ const db = require('../database/db');
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 
 const router = express.Router();
-
-
 router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
         const { name, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
 
-        // Check for missing required fields (allow program_id to be null)
-        if (!name || !email || !password || !role_id || !institution_id && !new_institution_name) {
+        // Check for missing required fields, allowing password to be optional
+        if (!name || !email || !role_id || (!institution_id && !new_institution_name)) {
             return res.status(400).json({ error: 'Missing required fields' });
-        }
-
-        // Password strength validation: at least one uppercase, one lowercase, one number, and one special character
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ error: 'Password must be 8-15 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' });
         }
 
         // Check if a user with the same email already exists
@@ -32,35 +24,27 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
-        // If a new institution is provided, insert it into the database and get its ID
-        let finalInstitutionId = institution_id;  // Default to the given institution_id from the request
+        // Handle new institution if provided
+        let finalInstitutionId = institution_id;
         if (new_institution_name) {
-            // Insert the new institution into the institutions table
             const insertInstitutionQuery = 'INSERT INTO institution (institution_name) VALUES (?)';
             const [insertedInstitutionResult] = await db.query(insertInstitutionQuery, [new_institution_name]);
-
-            // Use the inserted institution's ID
             finalInstitutionId = insertedInstitutionResult.insertId;
         }
 
-        // If a new program is provided, insert it into the database and get its ID
-        let finalProgramId = program_id;  // Default to the given program_id from the request
+        // Handle new program if provided
+        let finalProgramId = program_id;
         if (new_program_name) {
-            // Insert the new program into the programs table
             const insertProgramQuery = 'INSERT INTO program (program_name) VALUES (?)';
             const [insertedProgramResult] = await db.query(insertProgramQuery, [new_program_name]);
-
-            // Use the inserted program's ID
             finalProgramId = insertedProgramResult.insertId;
         }
-
-        // If program_id is not provided (i.e., null), ensure that it's set to null for database insertion
         if (program_id === '' || program_id === null) {
             finalProgramId = null;
         }
 
-        // Hash the password before saving it to the database
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Conditionally hash password if provided
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
         // Insert new user into the users table
         const insertUserQuery = `
@@ -76,7 +60,6 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 router.get('/users/all', async (req, res) => {
     try {
         const getAllUsersQuery = 'SELECT u.user_id, u.name, u.email,u.institution, u.role_id, r.role_name, p.program_name, u.institution FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id;';
