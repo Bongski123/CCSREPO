@@ -10,6 +10,7 @@ router.post('/register', async (req, res) => {
     try {
         const { name, email, password, role_id, program_id, institution_id } = req.body;
 
+        // Check for missing required fields
         if (!name || !email || !password || !role_id || !program_id || !institution_id) {  
             return res.status(400).json({ error: 'Missing required fields' });
         }
@@ -28,7 +29,7 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
-        // Hash the password
+        // Hash the password before saving it to the database
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert new user into the database
@@ -45,6 +46,7 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
+
 
 router.get('/users/all', async (req, res) => {
     try {
