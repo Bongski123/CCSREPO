@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
+        console.log('Received request body:', req.body);  // Add this line to log the incoming request body
+
         const { name, email, password, role_id, program_id, institution_id } = req.body;
 
         // Check for missing required fields
@@ -46,7 +48,6 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 
 router.get('/users/all', async (req, res) => {
     try {
