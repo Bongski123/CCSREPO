@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
         let finalInstitutionId = institution_id;  // Default to the given institution_id from the request
         if (new_institution_name) {
             // Insert the new institution into the institutions table
-            const insertInstitutionQuery = 'INSERT INTO institutions (institution_name) VALUES (?)';
+            const insertInstitutionQuery = 'INSERT INTO institution (institution_name) VALUES (?)';
             const [insertedInstitutionResult] = await db.query(insertInstitutionQuery, [new_institution_name]);
 
             // Use the inserted institution's ID
