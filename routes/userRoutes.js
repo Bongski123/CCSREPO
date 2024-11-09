@@ -6,8 +6,6 @@ const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../auth
 
 const router = express.Router();
 
-const bcrypt = require('bcrypt');
-const db = require('../db'); // Import your DB connection, adjust the path as needed
 
 router.post('/register', async (req, res) => {
     try {
