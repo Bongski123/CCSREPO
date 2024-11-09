@@ -11,7 +11,7 @@ router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
-        const { name, email, password, role_id, program_id, institution_id, new_institution_name } = req.body;
+        const { name, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
 
         // Check for missing required fields
         if (!name || !email || !password || !role_id || !program_id || (!institution_id && !new_institution_name)) {
@@ -43,6 +43,17 @@ router.post('/register', async (req, res) => {
             finalInstitutionId = insertedInstitutionResult.insertId;
         }
 
+        // If a new program is provided, insert it into the database and get its ID
+        let finalProgramId = program_id;  // Default to the given program_id from the request
+        if (new_program_name) {
+            // Insert the new program into the programs table
+            const insertProgramQuery = 'INSERT INTO program (program_name) VALUES (?)';
+            const [insertedProgramResult] = await db.query(insertProgramQuery, [new_program_name]);
+
+            // Use the inserted program's ID
+            finalProgramId = insertedProgramResult.insertId;
+        }
+
         // Hash the password before saving it to the database
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -51,7 +62,7 @@ router.post('/register', async (req, res) => {
             INSERT INTO users (name, email, password, role_id, program_id, institution_id) 
             VALUES (?, ?, ?, ?, ?, ?)
         `;
-        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id, finalInstitutionId]);
+        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
@@ -60,7 +71,6 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 
 router.get('/users/all', async (req, res) => {
     try {
