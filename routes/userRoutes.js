@@ -8,12 +8,12 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        console.log('Received request body:', req.body);  // Add this line to log the incoming request body
+        console.log('Received request body:', req.body);  // Log the incoming request body
 
-        const { name, email, password, role_id, program_id, institution_id } = req.body;
+        const { name, email, password, role_id, program_id, institution_id, new_institution_name } = req.body;
 
         // Check for missing required fields
-        if (!name || !email || !password || !role_id || !program_id || !institution_id) {  
+        if (!name || !email || !password || !role_id || !program_id || (!institution_id && !new_institution_name)) {  
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -31,6 +31,17 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
+        // If a new institution is provided, insert it into the database and get its ID
+        let finalInstitutionId = institution_id;  // Default to the given institution_id
+        if (new_institution_name) {
+            // Insert the new institution into the institutions table
+            const insertInstitutionQuery = 'INSERT INTO institutions (institution_name) VALUES (?)';
+            const [insertedInstitutionResult] = await db.query(insertInstitutionQuery, [new_institution_name]);
+
+            // Use the inserted institution's ID
+            finalInstitutionId = insertedInstitutionResult.insertId;
+        }
+
         // Hash the password before saving it to the database
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -39,7 +50,7 @@ router.post('/register', async (req, res) => {
             INSERT INTO users (name, email, password, role_id, program_id, institution_id) 
             VALUES (?, ?, ?, ?, ?, ?)
         `;
-        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id, institution_id]);
+        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, program_id, finalInstitutionId]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
