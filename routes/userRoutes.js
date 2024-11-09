@@ -6,24 +6,27 @@ const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../auth
 
 const router = express.Router();
 
+const bcrypt = require('bcrypt');
+const db = require('../db'); // Import your DB connection, adjust the path as needed
+
 router.post('/register', async (req, res) => {
     try {
-        console.log('Received request body:', req.body);  // Log the incoming request body
+        console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
         const { name, email, password, role_id, program_id, institution_id, new_institution_name } = req.body;
 
         // Check for missing required fields
-        if (!name || !email || !password || !role_id || !program_id || (!institution_id && !new_institution_name)) {  
+        if (!name || !email || !password || !role_id || !program_id || (!institution_id && !new_institution_name)) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Password strength validation
+        // Password strength validation: at least one uppercase, one lowercase, one number, and one special character
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
         if (!passwordRegex.test(password)) {
             return res.status(400).json({ error: 'Password must be 8-15 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' });
         }
 
-        // Check if user with the same email already exists
+        // Check if a user with the same email already exists
         const checkUserByEmailQuery = 'SELECT * FROM users WHERE email = ?';
         const [existingUserByEmailRows] = await db.query(checkUserByEmailQuery, [email]);
 
@@ -32,7 +35,7 @@ router.post('/register', async (req, res) => {
         }
 
         // If a new institution is provided, insert it into the database and get its ID
-        let finalInstitutionId = institution_id;  // Default to the given institution_id
+        let finalInstitutionId = institution_id;  // Default to the given institution_id from the request
         if (new_institution_name) {
             // Insert the new institution into the institutions table
             const insertInstitutionQuery = 'INSERT INTO institutions (institution_name) VALUES (?)';
@@ -45,7 +48,7 @@ router.post('/register', async (req, res) => {
         // Hash the password before saving it to the database
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert new user into the database
+        // Insert new user into the users table
         const insertUserQuery = `
             INSERT INTO users (name, email, password, role_id, program_id, institution_id) 
             VALUES (?, ?, ?, ?, ?, ?)
