@@ -138,6 +138,38 @@ router.put('/users/update/:userId', (req, res) => {
     });
   });
 
+
+  router.delete('/users/delete/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'Please provide user id' });
+        }
+
+        // Check if user exists before deleting
+        const checkUserQuery = 'SELECT * FROM users WHERE user_id = ?';
+        const [user] = await db.query(checkUserQuery, [userId]);
+
+        if (user.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Delete the user
+        const deleteUserQuery = 'DELETE FROM users WHERE user_id = ?';
+        const [deleteResult] = await db.query(deleteUserQuery, [userId]);
+
+        if (deleteResult.affectedRows === 0) {
+            return res.status(404).json({ error: 'Failed to delete user' });
+        }
+
+        res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 router.get('/programs/all', async (req, res) => {
     try {
         const getAllProgramsQuery = 'SELECT * FROM program;';
