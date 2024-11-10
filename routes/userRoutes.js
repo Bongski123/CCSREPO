@@ -62,6 +62,53 @@ router.post('/register', async (req, res) => {
     }
 });
 
+
+
+router.get('/users/all', async (req, res) => {
+    try {
+      // SQL query to fetch all items from the 'users' table
+      const query = `
+        SELECT 
+          u.user_id, 
+          u.first_name, 
+          u.middle_name, 
+          u.last_name, 
+          u.suffix, 
+          u.email, 
+          u.password, 
+          u.role_id, 
+          u.program_id, 
+          u.institution_id,
+          r.role_name, 
+          p.program_name, 
+          i.institution_name
+        FROM 
+          users u
+        JOIN 
+          roles r ON u.role_id = r.role_id
+        LEFT JOIN 
+          program p ON u.program_id = p.program_id
+        LEFT JOIN 
+          institution i ON u.institution_id = i.institution_id;
+      `;
+  
+      // Execute the query
+      const [rows] = await db.query(query);
+  
+      // If no records are found, return a message
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'No users found.' });
+      }
+  
+      // Return the retrieved rows (all user data)
+      res.status(200).json({ users: rows });
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'An error occurred while fetching the users.' });
+    }
+  });
+
+
 router.get('/users/:user_id', async (req, res) => {
     try {
         const userId = req.params.user_id;
