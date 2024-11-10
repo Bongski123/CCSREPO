@@ -37,11 +37,11 @@ router.post('/login', async (req, res) => {
             {
                 userId: user.user_id,
                 email: user.email,
-                name: user.first_name || user.last_name,
+                name: user.first_name,
                 roleId: user.role_id
             },
             secretKey,
-            { expiresIn: '1 hour' }
+            { expiresIn: '1h' }
         );
 
         // Send token and userId as response
