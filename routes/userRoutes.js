@@ -109,86 +109,99 @@ router.get('/users/all', async (req, res) => {
   });
 
 
+// Get User by ID
 router.get('/users/:user_id', async (req, res) => {
-    try {
-        const userId = req.params.user_id;
+  try {
+      const userId = req.params.user_id;
 
-        if (!userId) {
-            return res.status(400).json({ error: 'Please provide user id' });
-        }
+      if (!userId) {
+          return res.status(400).json({ error: 'Please provide user id' });
+      }
 
-        const getUserQuery = `SELECT * FROM users WHERE user_id = ?`;
-        const [rows] = await db.query(getUserQuery, [userId]);
+      const getUserQuery = `SELECT user_id, email, first_name, last_name, role_id, institution_id, program_id FROM users WHERE user_id = ?`;
+      const [rows] = await db.query(getUserQuery, [userId]);
 
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+      if (rows.length === 0) {
+          return res.status(404).json({ error: 'User not found' });
+      }
 
-        res.status(200).json({ user: rows[0] });
-    } catch (error) {
-        console.error('Error getting user:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+      // Return user data including first and last name
+      res.status(200).json({ user: rows[0] });
+  } catch (error) {
+      console.error('Error getting user:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
+// Update User Information
 router.put('/users/update/:userId', (req, res) => {
-    const userId = req.params.userId;
-    const { name, email, role_id, institutionId, programId } = req.body;
-  
-    // Ensure that the request body contains the necessary fields
-    if (!institutionId || !programId || !role_id || !name || !email) {
+  const userId = req.params.userId;
+  const { firstName, middleName, lastName, suffix, email, role_id, institutionId, programId } = req.body;
+
+  // Ensure that the request body contains the necessary fields
+  if (!firstName || !lastName || !role_id || !institutionId || !programId || !email) {
       return res.status(400).json({ message: 'Missing required fields' });
-    }
-  
-    const query = `
-      UPDATE users
-      SET name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ?
-      WHERE user_id = ?`;
-  
-    // Perform the update query
-    db.query(query, [name, email, role_id, institutionId, programId, userId], (err, result) => {
+  }
+
+  // Prepare the query
+  const query = `
+    UPDATE users
+    SET 
+      first_name = ?, 
+      middle_name = ?, 
+      last_name = ?, 
+      suffix = ?, 
+      email = ?, 
+      role_id = ?, 
+      institution_id = ?, 
+      program_id = ?
+    WHERE user_id = ?`;
+
+  // Perform the update query
+  db.query(query, [firstName, middleName, lastName, suffix, email, role_id, institutionId, programId, userId], (err, result) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ message: 'Error updating user data' });
+          console.error(err);
+          return res.status(500).json({ message: 'Error updating user data' });
       }
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'User not found' });
+          return res.status(404).json({ message: 'User not found' });
       }
       res.json({ message: 'User updated successfully' });
-    });
   });
-
-
-  router.delete('/users/delete/:userId', async (req, res) => {
-    try {
-        const userId = req.params.userId;
-
-        if (!userId) {
-            return res.status(400).json({ error: 'Please provide user id' });
-        }
-
-        // Check if user exists before deleting
-        const checkUserQuery = 'SELECT * FROM users WHERE user_id = ?';
-        const [user] = await db.query(checkUserQuery, [userId]);
-
-        if (user.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Delete the user
-        const deleteUserQuery = 'DELETE FROM users WHERE user_id = ?';
-        const [deleteResult] = await db.query(deleteUserQuery, [userId]);
-
-        if (deleteResult.affectedRows === 0) {
-            return res.status(404).json({ error: 'Failed to delete user' });
-        }
-
-        res.status(200).json({ message: 'User deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
 });
+
+// Delete User
+router.delete('/users/delete/:userId', async (req, res) => {
+  try {
+      const userId = req.params.userId;
+
+      if (!userId) {
+          return res.status(400).json({ error: 'Please provide user id' });
+      }
+
+      // Check if user exists before deleting
+      const checkUserQuery = 'SELECT * FROM users WHERE user_id = ?';
+      const [user] = await db.query(checkUserQuery, [userId]);
+
+      if (user.length === 0) {
+          return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Delete the user
+      const deleteUserQuery = 'DELETE FROM users WHERE user_id = ?';
+      const [deleteResult] = await db.query(deleteUserQuery, [userId]);
+
+      if (deleteResult.affectedRows === 0) {
+          return res.status(404).json({ error: 'Failed to delete user' });
+      }
+
+      res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 router.get('/programs/all', async (req, res) => {
     try {
