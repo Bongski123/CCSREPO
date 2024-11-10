@@ -9,10 +9,22 @@ router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
-        const { name, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
+        const {
+            firstName,
+            middleName,
+            lastName,
+            suffix,
+            email,
+            password,
+            role_id,
+            program_id,
+            institution_id,
+            new_institution_name,
+            new_program_name
+        } = req.body;
 
         // Check for missing required fields, allowing password to be optional
-        if (!name || !email || !role_id || (!institution_id && !new_institution_name)) {
+        if (!firstName || !lastName || !email || !role_id || (!institution_id && !new_institution_name)) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -48,10 +60,10 @@ router.post('/register', async (req, res) => {
 
         // Insert new user into the users table
         const insertUserQuery = `
-            INSERT INTO users (name, email, password, role_id, program_id, institution_id) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await db.query(insertUserQuery, [name, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
+        await db.query(insertUserQuery, [firstName, middleName, lastName, suffix, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
         res.status(201).json({ message: 'User Registered Successfully' });
 
@@ -60,26 +72,31 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
+
 router.get('/users/all', async (req, res) => {
     try {
-        const getAllUsersQuery = `SELECT 
-    u.user_id, 
-    u.name, 
-    u.email, 
-    i.institution_name AS institution,  
-    u.role_id, 
-    r.role_name, 
-    p.program_name, 
-    u.institution_id  
-FROM 
-    users u
-JOIN 
-    roles r ON u.role_id = r.role_id
-LEFT JOIN 
-    program p ON u.program_id = p.program_id
-LEFT JOIN 
-    institution i ON u.institution_id = i.institution_id;  
-`;
+        const getAllUsersQuery = `
+        SELECT 
+            u.user_id, 
+            u.first_name,
+            u.middle_name,
+            u.last_name,
+            u.suffix,
+            u.email, 
+            i.institution_name AS institution,  
+            u.role_id, 
+            r.role_name, 
+            p.program_name, 
+            u.institution_id  
+        FROM 
+            users u
+        JOIN 
+            roles r ON u.role_id = r.role_id
+        LEFT JOIN 
+            program p ON u.program_id = p.program_id
+        LEFT JOIN 
+            institution i ON u.institution_id = i.institution_id;
+        `;
         const [rows] = await db.query(getAllUsersQuery);
 
         res.status(200).json({ users: rows });
