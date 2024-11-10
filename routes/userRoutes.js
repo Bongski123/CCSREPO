@@ -97,7 +97,7 @@ router.get('/users/:user_id', async (req, res) => {
             return res.status(400).json({ error: 'Please provide user id' });
         }
 
-        const getUserQuery = 'SELECT u.user_id, u.name, u.email, u.role_id, r.role_name, p.program_name FROM users u JOIN roles r ON u.role_id = r.role_id LEFT JOIN program p ON u.program_id = p.program_id WHERE u.user_id = ?';
+        const getUserQuery = `SELECT * FROM users WHERE user_id = ?`;
         const [rows] = await db.query(getUserQuery, [userId]);
 
         if (rows.length === 0) {
