@@ -136,10 +136,10 @@ router.get('/users/:user_id', async (req, res) => {
 // Update User Information
 router.put('/users/update/:userId', (req, res) => {
   const userId = req.params.userId;
-  const { first_name, middle_name, last_name, suffix, email, role_id, institution_id, program_id } = req.body;
+  const { firstName, middleName, lastName, suffix, email, role_id, institutionId, programId } = req.body;
 
   // Ensure that the request body contains the necessary fields
-  if (!first_name || !last_name || !role_id || !institution_id || !program_id || !email) {
+  if (!firstName || !lastName || !role_id || !institutionId || !programId || !email) {
       return res.status(400).json({ message: 'Missing required fields' });
   }
 
@@ -158,7 +158,7 @@ router.put('/users/update/:userId', (req, res) => {
     WHERE user_id = ?`;
 
   // Perform the update query
-  db.query(query, [first_name, middle_name, last_name, suffix, email, role_id, institution_id, program_id, userId], (err, result) => {
+  db.query(query, [firstName, middleName, lastName, suffix, email, role_id, institutionId, programId, userId], (err, result) => {
       if (err) {
           console.error(err);
           return res.status(500).json({ message: 'Error updating user data' });
@@ -166,7 +166,7 @@ router.put('/users/update/:userId', (req, res) => {
       if (result.affectedRows === 0) {
           return res.status(404).json({ message: 'User not found' });
       }
-      res.json({ message: 'User updated successfully' });
+      res.status(200).json({ message: 'User updated successfully' });
   });
 });
 
