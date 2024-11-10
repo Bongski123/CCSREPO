@@ -116,7 +116,7 @@ router.put('/users/update/:userId', (req, res) => {
     const { name, email, role_id, institutionId, programId } = req.body;
   
     // Ensure that the request body contains the necessary fields
-    if (!institutionId || !programId || !role || !name || !email) {
+    if (!institutionId || !programId || !role_id || !name || !email) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
   
