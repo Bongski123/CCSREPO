@@ -111,31 +111,32 @@ router.get('/users/:user_id', async (req, res) => {
     }
 });
 
-router.put('/:user_id', async (req, res) => {
-    try {
-        const userId = req.params.user_id;
-        const { name, email, password } = req.body;
-
-        const getUserQuery = 'SELECT u.user_id, u.email, u.name, u.role_id, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?';
-        const [userRows] = await db.query(getUserQuery, [userId]);
-
-        if (userRows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const user = userRows[0];
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const updateUserQuery = 'UPDATE users SET name = ?, email = ?, password = ? WHERE user_id = ?';
-        await db.query(updateUserQuery, [name, email, hashedPassword, userId]);
-
-        const updatedUser = { ...user, name, role_name: user.role_name };
-        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
-
-    } catch (error) {
-        console.error('Error updating user:', error);
-        res.status(500).json({ error: 'User Update Endpoint Error!' });
+router.put('/users/update/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const { name, email, role_id, institutionId, programId } = req.body;
+  
+    // Ensure that the request body contains the necessary fields
+    if (!institutionId || !programId || !role || !name || !email) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
-});
+  
+    const query = `
+      UPDATE users
+      SET name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ?
+      WHERE user_id = ?`;
+  
+    // Perform the update query
+    db.query(query, [name, email, role_id, institutionId, programId, userId], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Error updating user data' });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json({ message: 'User updated successfully' });
+    });
+  });
 
 router.get('/programs/all', async (req, res) => {
     try {
