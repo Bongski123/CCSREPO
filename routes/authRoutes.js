@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
             {
                 userId: user.user_id,
                 email: user.email,
-                name: user.name,
+                name: user.first_name || user.last_name,
                 roleId: user.role_id
             },
             secretKey,
