@@ -188,6 +188,18 @@ router.get('/total/citations', async (req, res) => {
       res.status(500).send(err.message);
     }
   });
+
+  // Route to get total researches
+router.get('/total/researches', async (req, res) => {
+  try {
+    let sql = 'SELECT COUNT(*) AS total_researches FROM researches';
+    const [result] = await db.query(sql);
+    res.json(result[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
   
   // Route to get total users
   router.get('/all/users', async (req, res) => {
