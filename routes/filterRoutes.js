@@ -26,11 +26,10 @@ router.get('/category/:category_id', async (req, res) => {
         const getCategoryDocumentsQuery = `
 
 
-SELECT 
-    r.*,  
+SELECT  r.*,  
     GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
     GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
+    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS category
 FROM 
     researches r
 LEFT JOIN 
@@ -46,10 +45,12 @@ LEFT JOIN
 LEFT JOIN 
     category c ON rc.category_id = c.category_id 
 WHERE 
-    rc.category_id = ?  
+    rc.category_id = ?
+    
     AND r.status = 'approved' 
 GROUP BY 
     r.research_id;
+    
 
     
         `;
