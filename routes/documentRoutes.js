@@ -9,16 +9,18 @@ const {
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const jwtDecode = require('jwt-decode');  // Import jwt-decode for decoding the JWT token
 const router = express.Router();
+
 
 // Directory where files will be uploaded
 const uploadDir = path.resolve(__dirname, './uploads/documents');
+
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
+
 
 // Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
@@ -30,6 +32,7 @@ const storage = multer.diskStorage({
     },
 });
 
+
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
         cb(null, true);
@@ -38,7 +41,9 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
+
 const upload = multer({ storage, fileFilter });
+
 
 router.post('/upload', upload.single('file'), async (req, res) => {
     try {
@@ -54,15 +59,20 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'Invalid uploader ID!' });
         }
 
-        // Extract roleId or isAdmin from the token
-        const token = req.headers['authorization']?.split(' ')[1];  // Extract the token from headers
-        if (!token) {
-            return res.status(403).json({ error: 'Unauthorized, token required' });
+        // Check the roleId of the uploader
+        const [uploader] = await db.query('SELECT role_id FROM users WHERE user_id = ?', [uploader_id]);
+        if (uploader.length === 0) {
+            return res.status(404).json({ error: 'Uploader not found!' });
         }
 
-        const decodedToken = jwtDecode(token);
-        const roleId = decodedToken.roleId;  // Assuming 'roleId' is part of the token
-        const isAdmin = decodedToken.isAdmin; // Assuming 'isAdmin' is part of the token
+        const roleId = uploader[0].roleId;
+
+        // Set the default status
+        let status = 'pending';
+        // If the uploader's roleId is 1, set the status to 'approved'
+        if (roleId === 1) {
+            status = 'approved';
+        }
 
         // Check if title already exists
         const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
@@ -70,12 +80,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(409).json({ error: 'Document with this title already exists!' });
         }
 
-        // Determine if the document should be approved immediately
-        const status = (roleId === 1 || isAdmin) ? 'approved' : 'pending';
-
-        // Insert research
-        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)', 
-            [title, abstract, filename, uploader_id, status]);
+        // Insert research with dynamic status
+        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)', [title, abstract, filename, uploader_id, status]);
         const researchId = result.insertId;
 
         // Insert authors
@@ -136,4 +142,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
+
+
 module.exports = router;
+
+
+
