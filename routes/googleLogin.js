@@ -4,8 +4,8 @@ const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
 
 const router = express.Router();
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id'; // Use environment variable for security
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environment variable for security
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; 
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
