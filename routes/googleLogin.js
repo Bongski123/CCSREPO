@@ -55,7 +55,7 @@ router.post('/google-login', async (req, res) => {
       return res.status(200).json({
         userExists: false, // Indicate that the user does not exist
         email,
-        name,
+        google_name,
       });
     }
   } catch (error) {
