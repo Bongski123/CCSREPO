@@ -23,7 +23,7 @@ router.post('/google-login', async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { sub: googleId, email, name } = payload;
+    const { sub: googleId, email, google_name } = payload;
 
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
@@ -48,7 +48,7 @@ router.post('/google-login', async (req, res) => {
       // User does not exist, temporarily store Google name in 'google_name' column
       await db.query(
         'INSERT INTO users (email, google_name) VALUES (?, ?)',
-        [email, name]
+        [email, google_name]
       );
 
       // Return userExists flag along with name and email
