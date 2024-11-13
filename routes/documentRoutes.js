@@ -11,16 +11,13 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-
 // Directory where files will be uploaded
 const uploadDir = path.resolve(__dirname, './uploads/documents');
-
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
-
 
 // Configure multer for file uploads with file filter
 const storage = multer.diskStorage({
@@ -32,7 +29,6 @@ const storage = multer.diskStorage({
     },
 });
 
-
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
         cb(null, true);
@@ -41,9 +37,7 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-
 const upload = multer({ storage, fileFilter });
-
 
 router.post('/upload', upload.single('file'), async (req, res) => {
     try {
@@ -65,13 +59,16 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(404).json({ error: 'Uploader not found!' });
         }
 
-        const roleId = uploader[0].roleId;
+        const role_id = uploader[0].roleId;
+        console.log('Uploader roleId:', role_id); // Debugging step to log the roleId
 
         // Set the default status
         let status = 'pending';
-        // If the uploader's roleId is 1, set the status to 'approved'
-        if (roleId === 1) {
+        if (role_id === 1) {
+            console.log('Uploader is Admin, setting status to approved'); // Debugging step
             status = 'approved';
+        } else {
+            console.log('Uploader is not Admin, setting status to pending'); // Debugging step
         }
 
         // Check if title already exists
@@ -83,6 +80,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         // Insert research with dynamic status
         const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)', [title, abstract, filename, uploader_id, status]);
         const researchId = result.insertId;
+        console.log('Inserted Research ID:', researchId); // Debugging step
 
         // Insert authors
         const insertAuthors = async (researchId, authors) => {
@@ -142,9 +140,4 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-
-
 module.exports = router;
-
-
-
