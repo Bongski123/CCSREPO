@@ -15,7 +15,6 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 router.post('/google-login', async (req, res) => {
   const { id_token } = req.body;
 
-
   try {
     // Verify Google token
     const ticket = await client.verifyIdToken({
@@ -23,15 +22,12 @@ router.post('/google-login', async (req, res) => {
       audience: GOOGLE_CLIENT_ID,
     });
 
-
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
-
 
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
-
 
     if (user) {
       // User exists, generate JWT token
@@ -41,7 +37,6 @@ router.post('/google-login', async (req, res) => {
         { expiresIn: '1h' }
       );
 
-
       // Return response with the token and user info
       return res.status(200).json({
         token: accessToken,
@@ -50,7 +45,13 @@ router.post('/google-login', async (req, res) => {
         userExists: true, // Indicate that the user already exists
       });
     } else {
-      // User does not exist, do not insert yet. Just return userExists flag.
+      // User does not exist, temporarily store Google name in 'google_name' column
+      await db.query(
+        'INSERT INTO users (email, google_name) VALUES (?, ?)',
+        [email, name]
+      );
+
+      // Return userExists flag along with name and email
       return res.status(200).json({
         userExists: false, // Indicate that the user does not exist
         email,
@@ -62,6 +63,7 @@ router.post('/google-login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid Google token or error processing request' });
   }
 });
+
 
 
 module.exports = router;
