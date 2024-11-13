@@ -257,7 +257,7 @@ router.get('/authors/:authorId/papers', async (req, res) => {
             r.*,  
             GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
             GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-            GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories
+            GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS category
         FROM 
             researches r
         LEFT JOIN 
