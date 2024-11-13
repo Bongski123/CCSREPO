@@ -35,7 +35,8 @@ router.post('/google-login', async (req, res) => {
       const accessToken = jwt.sign(
         { 
           userId: user.user_id, // Include user_id in the token
-          name: user.name, 
+          firstName: user.first_name, 
+          lastName: user.last_name,
           email: user.email, 
           roleId: user.role_id, 
           picture: user.profile_picture || picture 
