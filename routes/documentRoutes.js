@@ -59,7 +59,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(404).json({ error: 'Uploader not found!' });
         }
 
-        const role_id = uploader[0].roleId;
+        const role_id = uploader[0].role_id;
         console.log('Uploader roleId:', role_id); // Debugging step to log the roleId
 
         // Set the default status
