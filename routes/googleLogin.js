@@ -20,7 +20,14 @@ router.post('/google-login', async (req, res) => {
     });
 
     const payload = ticket.getPayload();
+    console.log("Google Payload:", payload); // Log the payload to see its structure
+
     const { sub: googleId, email, name } = payload;
+
+    // Check if name exists
+    if (!name) {
+      return res.status(400).json({ error: 'Name is missing from the Google response' });
+    }
 
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
@@ -54,5 +61,4 @@ router.post('/google-login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid Google token or error processing request' });
   }
 });
-
 module.exports = router;
