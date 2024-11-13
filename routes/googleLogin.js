@@ -4,51 +4,61 @@ const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
 
 const router = express.Router();
-const GOOGLE_CLIENT_ID = '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com'; // Hardcoded Google Client ID
-const JWT_SECRET = 'Nhel-secret-key'; // Hardcoded JWT Secret Key
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id'; // Use environment variable for security
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environment variable for security
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 router.post('/google-login', async (req, res) => {
   const { id_token } = req.body;
 
+  if (!id_token) {
+    return res.status(400).json({ error: 'ID token is required' });
+  }
+
   try {
-    // Verify Google token
+    // Verify the Google token
     const ticket = await client.verifyIdToken({
       idToken: id_token,
       audience: GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload; // Include picture
+    const { sub: googleId, email, name, picture } = payload;
 
     // Check if the user already exists in the database
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const user = rows[0];
 
     if (user) {
-      // User exists, generate JWT token
+      // User exists, generate JWT token and include user_id
       const accessToken = jwt.sign(
-        { userId: user.user_id, name: user.name, email: user.email, roleId: user.role_id, picture: user.profile_picture || picture }, // Include profile picture
+        { 
+          userId: user.user_id, // Include user_id in the token
+          name: user.name, 
+          email: user.email, 
+          roleId: user.role_id, 
+          picture: user.profile_picture || picture 
+        },
         JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: '1h' } // Token expiration set to 1 hour
       );
 
-      // Return response with the token, user info, and picture
       return res.status(200).json({
-        token: accessToken,
-        userId: user.user_id,
+        token: accessToken, // Send the generated JWT token
+        userId: user.user_id, // Include userId in the response
         roleId: user.role_id,
         userExists: true,
-        picture: user.profile_picture || picture, // Return profile picture if available
+        name: user.name,
+        picture: user.profile_picture || picture, // Profile picture from database or Google
       });
     } else {
-      // User does not exist, do not insert yet. Just return userExists flag and profile picture
+      // User does not exist, return necessary info for signup
       return res.status(200).json({
         userExists: false,
         email,
         name,
-        picture, // Include Google profile picture URL for use during signup
+        picture, // Profile picture URL from Google
       });
     }
   } catch (error) {
