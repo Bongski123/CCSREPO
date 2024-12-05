@@ -43,7 +43,20 @@ const upload = multer({
 // Replace/Update File Endpoint
 router.post('/research/:researchId/upload', upload.single('file'), async (req, res) => {
   const { researchId } = req.params;
-  const userId = req.body.userId; // Assume `userId` is sent with the request
+
+  // Validate JWT and extract userId
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized. No token provided.' });
+  }
+
+  let userId;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    userId = decoded.userId; // Assume the token payload includes `userId`
+  } catch (err) {
+    return res.status(403).json({ message: 'Invalid or expired token.' });
+  }
 
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
