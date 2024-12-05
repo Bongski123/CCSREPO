@@ -46,7 +46,9 @@ const googleRoutes=require("./routes/googleLogin");
 
 const PasswordReset = require("./routes/PasswordReset");
 
+//updatefiles
 
+const Updatefiles=require("./routes/filesupdate");
 
 const app = express();
 app.use(bodyParser.json());
@@ -66,6 +68,7 @@ app.use(PasswordReset);
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
+app.use(Updatefiles);
 
 // Browse Filter
 app.use(filterRoutes);
