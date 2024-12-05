@@ -10,12 +10,12 @@ const router = express.Router();
 // FTPS Configuration
 const ftpsConfig = {
     host: "c011ftp.cloudclusters.net", // Replace with your FTPS host
-    user: "admin",       // Replace with your FTPS username
-    password: "hCmGOATIy6NL",   // Replace with your FTPS password
-    secure: true,                // Enable secure connection
+    user: "admin",                     // Replace with your FTPS username
+    password: "hCmGOATIy6NL",          // Replace with your FTPS password
+    secure: true,                      // Enable secure connection
 };
 
-// Configure multer for temporary local file storage
+// Multer Configuration for Temporary Local Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const tempDir = path.resolve(__dirname, "./temp");
@@ -39,66 +39,43 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// Function to upload files to FTPS
+// Function to Upload Files to FTPS
 async function uploadToFTPS(localPath, remotePath) {
     const client = new FTPClient.Client();
-    try {
-        await client.access(ftpsConfig);
-        console.log(`Connected to FTPS: ${ftpsConfig.host}`);
-        await client.uploadFrom(localPath, remotePath);
-        console.log(`File uploaded to FTPS: ${remotePath}`);
-    } catch (err) {
-        console.error("FTPS Upload Error:", err);
-        throw err;
-    } finally {
-        client.close();
+    client.ftp.timeout = 30000;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            await client.access(ftpsConfig);
+            console.log(`Connected to FTPS (Attempt ${attempt}): ${ftpsConfig.host}`);
+            await client.uploadFrom(localPath, remotePath);
+            console.log(`File uploaded to FTPS: ${remotePath}`);
+            return;
+        } catch (err) {
+            console.error(`FTPS Upload Attempt ${attempt} Failed:`, err);
+            if (attempt === 3) throw err;
+        } finally {
+            client.close();
+        }
     }
 }
 
-// Utility functions for inserting metadata
-const insertAuthors = async (researchId, authors) => {
-    const authorNames = authors.split(",").map((name) => name.trim());
-    for (const name of authorNames) {
-        let [author] = await db.query("SELECT author_id FROM authors WHERE author_name = ?", [name]);
-        if (author.length === 0) {
-            const [result] = await db.query("INSERT INTO authors (author_name) VALUES (?)", [name]);
-            author = { author_id: result.insertId };
+// Helper Functions for Metadata Insertion
+const insertMetadata = async (tableName, idField, nameField, mappingTable, researchId, values) => {
+    const items = values.split(",").map((item) => item.trim());
+    for (const item of items) {
+        let [record] = await db.query(`SELECT ${idField} FROM ${tableName} WHERE ${nameField} = ?`, [item]);
+        if (record.length === 0) {
+            const [result] = await db.query(`INSERT INTO ${tableName} (${nameField}) VALUES (?)`, [item]);
+            record = { [idField]: result.insertId };
         } else {
-            author = author[0];
+            record = record[0];
         }
-        await db.query("INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)", [researchId, author.author_id]);
+        await db.query(`INSERT INTO ${mappingTable} (research_id, ${idField}) VALUES (?, ?)`, [researchId, record[idField]]);
     }
 };
 
-const insertCategories = async (researchId, categories) => {
-    const categoryNames = categories.split(",").map((name) => name.trim());
-    for (const name of categoryNames) {
-        let [category] = await db.query("SELECT category_id FROM category WHERE category_name = ?", [name]);
-        if (category.length === 0) {
-            const [result] = await db.query("INSERT INTO category (category_name) VALUES (?)", [name]);
-            category = { category_id: result.insertId };
-        } else {
-            category = category[0];
-        }
-        await db.query("INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)", [researchId, category.category_id]);
-    }
-};
-
-const insertKeywords = async (researchId, keywords) => {
-    const keywordNames = keywords.split(",").map((name) => name.trim());
-    for (const name of keywordNames) {
-        let [keyword] = await db.query("SELECT keyword_id FROM keywords WHERE keyword_name = ?", [name]);
-        if (keyword.length === 0) {
-            const [result] = await db.query("INSERT INTO keywords (keyword_name) VALUES (?)", [name]);
-            keyword = { keyword_id: result.insertId };
-        } else {
-            keyword = keyword[0];
-        }
-        await db.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)", [researchId, keyword.keyword_id]);
-    }
-};
-
-// Endpoint for uploading files
+// File Upload Endpoint
 router.post("/upload", upload.single("file"), async (req, res) => {
     try {
         if (!req.file) {
@@ -121,10 +98,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
             return res.status(404).json({ error: "Uploader not found!" });
         }
 
-        const role_id = uploader[0].role_id;
-        const status = role_id === 1 ? "approved" : "pending";
+        const status = uploader[0].role_id === 1 ? "approved" : "pending";
 
-        // Check if title exists
+        // Check for existing title
         const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
         if (existingDocument.length > 0) {
             return res.status(409).json({ error: "Document with this title already exists!" });
@@ -138,9 +114,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         const researchId = result.insertId;
 
         // Insert authors, categories, and keywords
-        await insertAuthors(researchId, authors);
-        await insertCategories(researchId, categories);
-        await insertKeywords(researchId, keywords);
+        await insertMetadata("authors", "author_id", "author_name", "research_authors", researchId, authors);
+        await insertMetadata("category", "category_id", "category_name", "research_categories", researchId, categories);
+        await insertMetadata("keywords", "keyword_id", "keyword_name", "research_keywords", researchId, keywords);
 
         res.status(201).json({ message: "Document uploaded successfully!" });
     } catch (error) {
