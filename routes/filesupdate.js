@@ -51,7 +51,7 @@ router.post('/research/:researchId/upload', upload.single('file'), async (req, r
 
   try {
     const [existingResearch] = await db.query(
-      'SELECT filename FROM researches WHERE research_id = ? AND user_id = ?',
+      'SELECT filename FROM researches WHERE research_id = ? AND uploader_id = ?',
       [researchId, userId]
     );
 
