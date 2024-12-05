@@ -77,7 +77,7 @@ router.post('/research/:researchId/upload', upload.single('file'), async (req, r
     const oldFilePath = path.join(uploadDirectory, oldFile);
     if (fs.existsSync(oldFilePath)) {
       fs.unlinkSync(oldFilePath);
-    }
+    } 
 
     // Update the database with the new file
     await db.query('UPDATE researches SET filename = ? WHERE research_id = ? AND uploader_id = ?', [

@@ -69,27 +69,29 @@ router.get('/users/all', async (req, res) => {
       // SQL query to fetch all items from the 'users' table
       const query = `
         SELECT 
-          u.user_id, 
-          u.first_name, 
-          u.middle_name, 
-          u.last_name, 
-          u.suffix, 
-          u.email, 
-          u.password, 
-          u.role_id, 
-          u.program_id, 
-          u.institution_id,
-          r.role_name, 
-          p.program_name, 
-          i.institution_name
-        FROM 
-          users u
-        JOIN 
-          roles r ON u.role_id = r.role_id
-        LEFT JOIN 
-          program p ON u.program_id = p.program_id
-        LEFT JOIN 
-          institution i ON u.institution_id = i.institution_id;
+    u.user_id, 
+    CONCAT(
+        u.first_name, ' ',
+        COALESCE(CONCAT(u.middle_name, ' '), ''), 
+        u.last_name, 
+        COALESCE(CONCAT(', ', u.suffix), '')
+    ) AS full_name, -- Combine name fields into a full name
+    u.email, 
+    u.password, 
+    u.role_id, 
+    u.program_id, 
+    COALESCE(i.institution_name, 'N/A') AS institution, -- Handle missing institution
+    r.role_name, 
+    COALESCE(p.program_name, 'N/A') AS program_name -- Handle missing program
+FROM 
+    users u
+JOIN 
+    roles r ON u.role_id = r.role_id
+LEFT JOIN 
+    program p ON u.program_id = p.program_id
+LEFT JOIN 
+    institution i ON u.institution_id = i.institution_id;
+
       `;
   
       // Execute the query
