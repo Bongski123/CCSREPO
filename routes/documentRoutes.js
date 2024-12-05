@@ -42,30 +42,21 @@ const upload = multer({ storage, fileFilter });
 // Function to Upload Files to FTPS
 async function uploadToFTPS(localPath, remotePath) {
     const client = new FTPClient.Client();
-    client.ftp.timeout = 60000;  // Set timeout to 60 seconds
-    client.ftp.usePassiveMode = true;  // Enable passive mode
-    for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-            console.log(`Connecting to FTPS (Attempt ${attempt}): ${ftpsConfig.host}`);
-            await client.access(ftpsConfig);
-            console.log("Connected to FTPS successfully.");
+    client.ftp.timeout = 30000;  // Set timeout to avoid long delays
 
-            // Upload file to remote path
-            await client.uploadFrom(localPath, remotePath);
-            console.log(`File uploaded to FTPS: ${remotePath}`);
-            return; // Exit on successful upload
-        } catch (err) {
-            console.error(`FTPS Upload Attempt ${attempt} Failed:`, err);
-            if (attempt === 3) {
-                console.error("All upload attempts failed. Throwing error.");
-                throw err;
-            }
-        } finally {
-            client.close();
-        }
+    try {
+        await client.access(ftpsConfig);
+        console.log(`Connected to FTPS: ${ftpsConfig.host}`);
+
+        // Upload the file from localPath to remotePath
+        await client.uploadFrom(localPath, remotePath);
+        console.log(`File uploaded successfully to: ${remotePath}`);
+    } catch (err) {
+        console.error('FTPS upload failed:', err);
+    } finally {
+        client.close();
     }
 }
-
 // Helper Functions for Metadata Insertion
 const insertMetadata = async (tableName, idField, nameField, mappingTable, researchId, values) => {
     const items = values.split(",").map((item) => item.trim());
