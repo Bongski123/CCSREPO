@@ -9,7 +9,7 @@ const router = express.Router();
 
 // FTPS Configuration
 const ftpsConfig = {
-    host: "c011ftp.cloudclusters.net", // Replace with your FTPS host
+    host: "c011ftp.cloudclusters.net",  // Replace with your FTPS host
     user: "admin",                     // Replace with your FTPS username
     password: "hCmGOATIy6NL",          // Replace with your FTPS password
     secure: true,                      // Enable secure connection
@@ -42,18 +42,24 @@ const upload = multer({ storage, fileFilter });
 // Function to Upload Files to FTPS
 async function uploadToFTPS(localPath, remotePath) {
     const client = new FTPClient.Client();
-    client.ftp.timeout = 30000;
-
+    client.ftp.timeout = 60000;  // Set timeout to 60 seconds
+    client.ftp.usePassiveMode = true;  // Enable passive mode
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
+            console.log(`Connecting to FTPS (Attempt ${attempt}): ${ftpsConfig.host}`);
             await client.access(ftpsConfig);
-            console.log(`Connected to FTPS (Attempt ${attempt}): ${ftpsConfig.host}`);
+            console.log("Connected to FTPS successfully.");
+
+            // Upload file to remote path
             await client.uploadFrom(localPath, remotePath);
             console.log(`File uploaded to FTPS: ${remotePath}`);
-            return;
+            return; // Exit on successful upload
         } catch (err) {
             console.error(`FTPS Upload Attempt ${attempt} Failed:`, err);
-            if (attempt === 3) throw err;
+            if (attempt === 3) {
+                console.error("All upload attempts failed. Throwing error.");
+                throw err;
+            }
         } finally {
             client.close();
         }
@@ -87,7 +93,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         const remoteFilePath = `/uploads/documents/${req.file.filename}`;
 
         // Upload file to FTPS
-        await uploadToFTPS(localFilePath, remoteFilePath);
+        try {
+            await uploadToFTPS(localFilePath, remoteFilePath);
+        } catch (err) {
+            // If upload fails after 3 attempts, return error
+            return res.status(500).json({ error: "Failed to upload file to FTPS after 3 attempts." });
+        }
 
         // Clean up temporary local file
         fs.unlinkSync(localFilePath);
