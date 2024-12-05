@@ -67,7 +67,7 @@ router.post('/research/:researchId/upload', upload.single('file'), async (req, r
     }
 
     // Update the database with the new file
-    await db.query('UPDATE researches SET filename = ? WHERE research_id = ? AND user_id = ?', [
+    await db.query('UPDATE researches SET filename = ? WHERE research_id = ? AND uploader_id = ?', [
       req.file.filename,
       researchId,
       userId,
