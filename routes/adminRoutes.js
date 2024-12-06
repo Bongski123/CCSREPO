@@ -150,6 +150,44 @@ router.get("/researches", async (req, res) => {
   }
 });
 
+router.get("/researches/rejected", async (req, res) => {
+  try {
+    const { notificationId } = req.query; // Optionally filter by notificationId
+
+    let query = `
+      SELECT 
+        r.research_id, 
+        r.title, 
+        r.publish_date, 
+        r.abstract, 
+        r.filename, 
+        r.status, 
+        n.message AS rejection_reason,
+        GROUP_CONCAT(a.author_name) AS authors
+      FROM researches r
+      LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+      LEFT JOIN authors a ON ra.author_id = a.author_id
+      LEFT JOIN notifications n ON n.research_id = r.research_id
+      WHERE r.status = 'Rejected'`;
+
+    if (notificationId) {
+      query += ` AND n.notification_id = ?`;
+    }
+
+    query += ` GROUP BY r.research_id`;
+
+    const [researches] = notificationId
+      ? await db.query(query, [notificationId])
+      : await db.query(query);
+
+    res.status(200).json(researches);
+  } catch (error) {
+    console.error("Error getting rejected researches:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting rejected researches" });
+  }
+});
 
 // Route to get total downloads
 // Route to get total downloads
