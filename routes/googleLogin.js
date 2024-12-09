@@ -2,12 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const db = require('../database/db');
+const dotenv = require('dotenv');
 
-require('dotenv').config();
 const router = express.Router();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ;
 const JWT_SECRET = process.env.JWT_SECRET; 
-
+dotenv.config()
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 router.post('/google-login', async (req, res) => {
