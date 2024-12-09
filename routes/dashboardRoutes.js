@@ -154,4 +154,30 @@ router.post('/total/downloads', (req, res) => {
     });
 });
 
+
+router.get('/top-downloads', (req, res) => {
+    const query = `
+      SELECT 
+        r.research_id, 
+        r.title, 
+        r.downloadCount, 
+        GROUP_CONCAT(a.author_name) AS authors
+      FROM researches r
+      LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+      LEFT JOIN authors a ON ra.author_id = a.author_id
+      GROUP BY r.research_id
+      ORDER BY r.downloadCount DESC
+      LIMIT 10;
+    `;
+  
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error('Error fetching top downloads:', err);
+        res.status(500).json({ error: 'Failed to fetch top downloads.' });
+      } else {
+        res.json(results);
+      }
+    });
+  });
+
 module.exports = router;
