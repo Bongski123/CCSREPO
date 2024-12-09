@@ -190,7 +190,7 @@ LIMIT 10;
     }
 });
 
-router.get('/trending-searches', (req, res) => {
+router.get('/trending-searches',async (req, res) => {
     // SQL query to get the top 10 most searched papers
     const fetchQuery = `
       SELECT 
