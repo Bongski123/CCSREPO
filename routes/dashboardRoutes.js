@@ -209,7 +209,7 @@ router.get('/trending-searches',async (req, res) => {
     `;
   
      try {
-        const [results] = await db.query(query);
+        const [results] = await db.query(fetchQuery);
         res.status(200).json(results);
     } catch (error) {
         console.error('Error fetching trending researches:', error.message, error.stack);
