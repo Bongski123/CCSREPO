@@ -160,7 +160,7 @@ router.get('/top-downloads', async (req, res) => {
       SELECT 
     r.research_id,
     r.title, 
-    r.abstract 
+    r.abstract ,
     COALESCE(r.downloadCount, 0) AS downloadCount, 
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
     COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
