@@ -5,8 +5,8 @@ const db = require('../database/db');
 const dotenv = require('dotenv');
 
 const router = express.Router();
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ;
-const JWT_SECRET = process.env.JWT_SECRET; 
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '968089167315-ch1eu1t6l1g8m2uuhrdc5s75gk9pn03d.apps.googleusercontent.com';
+const JWT_SECRET = process.env.JWT_SECRET || 'Nhel-secret-key'; 
 dotenv.config()
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
