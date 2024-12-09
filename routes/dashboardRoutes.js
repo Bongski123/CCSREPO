@@ -190,4 +190,43 @@ LIMIT 10;
     }
 });
 
+router.get('/trending-searches', (req, res) => {
+    const researchId = req.query.researchId; // Assuming you pass the research ID as a query parameter
+  
+    if (researchId) {
+      // Log the search into the search_logs table
+      const logQuery = 'INSERT INTO search_logs (research_id) VALUES (?)';
+      db.query(logQuery, [researchId], (err) => {
+        if (err) {
+          console.error('Error logging search:', err);
+        }
+      });
+    }
+  
+    // Fetch top 10 trending searches
+    const fetchQuery = `
+      SELECT 
+        r.research_id, 
+        r.title, 
+        COUNT(sl.search_id) AS search_count
+      FROM 
+        researches r
+      JOIN 
+        search_logs sl ON r.research_id = sl.research_id
+      GROUP BY 
+        r.research_id, r.title
+      ORDER BY 
+        search_count DESC
+      LIMIT 10;
+    `;
+  
+    db.query(fetchQuery, (err, results) => {
+      if (err) {
+        console.error('Error fetching trending searches:', err);
+        return res.status(500).json({ error: 'Error fetching data' });
+      }
+      res.json(results);
+    });
+  });
+
 module.exports = router;
