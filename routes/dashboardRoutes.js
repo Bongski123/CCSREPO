@@ -155,7 +155,7 @@ router.post('/total/downloads', (req, res) => {
 });
 
 
-router.post('/top-downloads', (req, res) => {
+router.get('/top-downloads', async (req, res) => {
     const query = `
         SELECT 
             r.research_id, 
@@ -170,17 +170,16 @@ router.post('/top-downloads', (req, res) => {
         LIMIT 10;
     `;
 
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Error fetching top downloads:', err.message, err.stack);
-            res.status(500).json({ 
-                error: 'Failed to fetch top downloads.', 
-                details: err.message 
-            });
-        } else {
-            res.status(200).json(results);
-        }
-    });
+    try {
+        const [results] = await db.query(query);
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching top downloads:', error.message, error.stack);
+        res.status(500).json({ 
+            error: 'Failed to fetch top downloads.', 
+            details: error.message 
+        });
+    }
 });
 
 module.exports = router;
