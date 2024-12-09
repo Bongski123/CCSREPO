@@ -158,11 +158,12 @@ router.post('/total/downloads', (req, res) => {
 router.get('/top-downloads', async (req, res) => {
     const query = `
       SELECT 
-    r.research_id, 
+    r.research_id,
     r.title, 
+    r.abstract 
     COALESCE(r.downloadCount, 0) AS downloadCount, 
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
-    COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS categories,
+    COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
     COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name), 'No Keywords') AS keywords
 FROM researches r
 LEFT JOIN research_authors ra ON r.research_id = ra.research_id
