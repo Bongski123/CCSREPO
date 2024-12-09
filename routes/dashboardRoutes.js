@@ -157,17 +157,24 @@ router.post('/total/downloads', (req, res) => {
 
 router.get('/top-downloads', async (req, res) => {
     const query = `
-        SELECT 
-            r.research_id, 
-            r.title, 
-            COALESCE(r.downloadCount, 0) AS downloadCount, 
-            COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors
-        FROM researches r
-        LEFT JOIN research_authors ra ON r.research_id = ra.research_id
-        LEFT JOIN authors a ON ra.author_id = a.author_id
-        GROUP BY r.research_id, r.title, r.downloadCount
-        ORDER BY r.downloadCount DESC
-        LIMIT 10;
+      SELECT 
+    r.research_id, 
+    r.title, 
+    COALESCE(r.downloadCount, 0) AS downloadCount, 
+    COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
+    COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS categories,
+    COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name), 'No Keywords') AS keywords
+FROM researches r
+LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+LEFT JOIN authors a ON ra.author_id = a.author_id
+LEFT JOIN research_categories rc ON r.research_id = rc.research_id
+LEFT JOIN category c ON rc.category_id = c.category_id
+LEFT JOIN research_keywords rk ON r.research_id = rk.research_id
+LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
+GROUP BY r.research_id, r.title, r.downloadCount
+ORDER BY r.downloadCount DESC
+LIMIT 10;
+
     `;
 
     try {
