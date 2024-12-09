@@ -193,19 +193,39 @@ LIMIT 10;
 router.get('/trending-searches',async (req, res) => {
     // SQL query to get the top 10 most searched papers
     const fetchQuery = `
-      SELECT 
+     SELECT 
+    r.research_id,
+    r.title, 
+    r.abstract,
+    COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
+    COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
+    COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name), 'No Keywords') AS keywords,
+    COALESCE(sl.search_count, 0) AS searchCount
+FROM 
+    researches r
+LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+LEFT JOIN authors a ON ra.author_id = a.author_id
+LEFT JOIN research_categories rc ON r.research_id = rc.research_id
+LEFT JOIN category c ON rc.category_id = c.category_id
+LEFT JOIN research_keywords rk ON r.research_id = rk.research_id
+LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
+LEFT JOIN (
+    SELECT 
         r.research_id, 
-        r.title, 
         COUNT(sl.search_id) AS search_count
-      FROM 
+    FROM 
         researches r
-      JOIN 
+    JOIN 
         search_logs sl ON r.research_id = sl.research_id
-      GROUP BY 
-        r.research_id, r.title
-      ORDER BY 
-        search_count DESC
-      LIMIT 10;
+    GROUP BY 
+        r.research_id
+) sl ON r.research_id = sl.research_id
+GROUP BY 
+    r.research_id, r.title, r.abstract
+ORDER BY 
+    searchCount DESC
+LIMIT 10;
+
     `;
   
      try {
