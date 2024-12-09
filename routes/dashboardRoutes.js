@@ -155,7 +155,7 @@ router.post('/total/downloads', (req, res) => {
 });
 
 
-router.get('/top-downloads', (req, res) => {
+router.post('/top-downloads', (req, res) => {
     const query = `
         SELECT 
             r.research_id, 
