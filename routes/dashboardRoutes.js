@@ -208,15 +208,17 @@ router.get('/trending-searches',async (req, res) => {
       LIMIT 10;
     `;
   
-    db.query(fetchQuery, (err, results) => {
-      if (err) {
-        console.error('Error fetching trending searches:', err);
-        return res.status(500).json({ error: 'Error fetching data' });
-      }
-      res.json(results);
-    });
-  });
-
+     try {
+        const [results] = await db.query(query);
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching trending researches:', error.message, error.stack);
+        res.status(500).json({ 
+            error: 'Failed to fetch trending researches.', 
+            details: error.message 
+        });
+    }
+});
 
   // POST route to log a search
 router.post('/log-search', (req, res) => {
