@@ -191,19 +191,7 @@ LIMIT 10;
 });
 
 router.get('/trending-searches', (req, res) => {
-    const researchId = req.query.researchId; // Assuming you pass the research ID as a query parameter
-  
-    if (researchId) {
-      // Log the search into the search_logs table
-      const logQuery = 'INSERT INTO search_logs (research_id) VALUES (?)';
-      db.query(logQuery, [researchId], (err) => {
-        if (err) {
-          console.error('Error logging search:', err);
-        }
-      });
-    }
-  
-    // Fetch top 10 trending searches
+    // SQL query to get the top 10 most searched papers
     const fetchQuery = `
       SELECT 
         r.research_id, 
@@ -229,4 +217,25 @@ router.get('/trending-searches', (req, res) => {
     });
   });
 
+
+  // POST route to log a search
+router.post('/log-search', (req, res) => {
+    const { researchId } = req.body;
+  
+    if (!researchId) {
+      return res.status(400).json({ error: 'Research ID is required' });
+    }
+  
+    // SQL query to insert a search log
+    const logQuery = 'INSERT INTO search_logs (research_id) VALUES (?)';
+    db.query(logQuery, [researchId], (err) => {
+      if (err) {
+        console.error('Error logging search:', err);
+        return res.status(500).json({ error: 'Error logging search' });
+      }
+      console.log('Search logged successfully');
+      res.status(200).json({ message: 'Search logged successfully' });
+    });
+  });
+  
 module.exports = router;
