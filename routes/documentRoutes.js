@@ -12,7 +12,7 @@ const path = require("path");
 const { google } = require("googleapis");
 const router = express.Router();
 require("dotenv").config(); // For loading environment variables
-
+const KEYFILEPATH = path.resolve(__dirname, "../service-account.json"); // Set this to the correct path to your service account JSON
 // Google Drive configuration
 process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(__dirname, "../service-account.json");
 
