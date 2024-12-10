@@ -65,6 +65,7 @@ router.get('/pdf/:research_id', async (req, res) => {
     try {
         // Retrieve the file_id from the database based on research ID
         const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
+        console.log('Database Query Result:', result);
 
         if (result.length > 0) {
             const fileId = result[0].file_id;
@@ -80,22 +81,26 @@ router.get('/pdf/:research_id', async (req, res) => {
                     fields: 'name',
                 });
                 const fileName = metadataResponse.data.name || 'document.pdf';
-
+                console.log('Google Drive File Metadata:', metadataResponse.data); // Log file metadata
                 // Fetch file content
                 const driveResponse = await drive.files.get({
                     fileId: fileId,
                     alt: 'media',
                 }, { responseType: 'arraybuffer' });
+                console.log('Google Drive File Content Length:', driveResponse.data.byteLength); // Log file size
+               
 
-                // Set headers for PDF response
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+                 // Set headers and send file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.send(Buffer.from(driveResponse.data));
 
+ 
                 // Send the file data
-                res.send(driveResponse.data);
+                res.send(Buffer.from(driveResponse.data)); // Convert binary data to Buffer and send it
             } catch (err) {
                 console.error('Error retrieving the file from Google Drive:', err.message);
-                return res.status(500).send('Error retrieving the file from Google Drive');
+                res.status(500).send('Error retrieving the file from Google Drive');
             }
 
         } else {
