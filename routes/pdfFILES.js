@@ -61,7 +61,7 @@ const drive = google.drive({
 });
 
 // Folder ID for the Google Drive folder where PDFs are stored (from .env)
-const folderId = process.env.GOOGLE_FOLDER_ID;
+const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc";
 
 // API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
