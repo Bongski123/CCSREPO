@@ -1,126 +1,144 @@
 const express = require("express");
 const db = require("../database/db");
-const { authenticateToken, isAdmin } = require("../authentication/middleware");
-const multer = require("multer");
+const {
+  authenticateToken,
+  isAdmin,
+  isNCFUser,
+  isNotNCFUser,
+} = require("../authentication/middleware");
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { google } = require("googleapis");
-
 const router = express.Router();
-const streamifier = require("streamifier"); // Import streamifier
-require("dotenv").config(); // Load environment variables
-const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../googleAPI.json')));
-// Google Drive Setup
-const SCOPES = ["https://www.googleapis.com/auth/drive"];
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ["https://www.googleapis.com/auth/drive.file"]
+
+// Directory where files will be uploaded
+const uploadDir = path.resolve(__dirname, './uploads/documents');
+
+// Ensure upload directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for file uploads with file filter
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
 });
 
-const drive = google.drive({ version: "v3", auth });
-// Multer Setup for File Uploads
-const upload = multer({
-  storage: multer.memoryStorage(),  // Use memoryStorage to store file in memory, not local disk
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
-      cb(null, true);
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
     } else {
-      cb(new Error("Invalid file type, only PDFs are allowed!"), false);
+        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
     }
-  },
-});
-
-// Sanitize Table Name Helper
-const sanitizeTableName = (table) => {
-  const validTables = ["authors", "category", "keywords"];
-  if (!validTables.includes(table)) {
-    console.error(`Invalid table name: ${table}`);
-    throw new Error("Invalid table name");
-  }
-  return table;
 };
 
-// File Upload Route
-router.post("/upload", upload.single("file"), async (req, res) => {
-  try {
-    // Check if file is uploaded
-    if (!req.file) {
-      return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
-    }
+const upload = multer({ storage, fileFilter });
 
-    // Extract form data
-    const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
-    const fileName = req.file.originalname;
-
-    // Validate uploader ID
-    if (!uploader_id || isNaN(uploader_id)) throw new Error("Invalid uploader ID!");
-
-    // Fetch uploader info and validate role
-    const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
-    if (uploader.length === 0) throw new Error("Uploader not found!");
-    const role_id = uploader[0].role_id;
-    const status = role_id === 1 ? "approved" : "pending";
-
-    // Check for duplicate title in database
-    const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
-    if (existingDocument.length > 0) throw new Error("Document with this title already exists!");
-
-    // Google Drive upload metadata
-    const fileMetadata = {
-      name: fileName,
-      parents: process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc' // Default folder if not set
-    };
-
-    // Convert Buffer to Readable Stream
-    const media = {
-      mimeType: "application/pdf",
-      body: streamifier.createReadStream(req.file.buffer),  // Convert the buffer to a stream
-    };
-
-    // Upload file to Google Drive
-    const driveResponse = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: "id, name",
-    });
-
-    const driveFileId = driveResponse.data.id;
-
-    // Insert research metadata into database
-    const [result] = await db.query(
-      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, drive_file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
-      [title, abstract, fileName, uploader_id, status, driveFileId] // Store Google Drive file ID in the database
-    );
-    const researchId = result.insertId;
-
-    // Insert authors, categories, and keywords into respective tables
-    const insertEntities = async (entities, table, columnName) => {
-      const sanitizedTable = sanitizeTableName(table);
-      const names = entities.split(",").map((name) => name.trim());
-      for (const name of names) {
-        let [entity] = await db.query(`SELECT ${columnName} FROM ${sanitizedTable} WHERE ${sanitizedTable.slice(0, -1)}_name = ?`, [name]);
-        if (entity.length === 0) {
-          const [result] = await db.query(`INSERT INTO ${sanitizedTable} (${sanitizedTable.slice(0, -1)}_name) VALUES (?)`, [name]);
-          entity = { [columnName]: result.insertId };
-        } else {
-          entity = entity[0];
+router.post('/upload', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
         }
-        const joinTable = `research_${sanitizedTable}`;
-        await db.query(`INSERT INTO ${joinTable} (research_id, ${columnName}) VALUES (?, ?)`, [researchId, entity[columnName]]);
-      }
-    };
 
-    // Insert entities for authors, categories, and keywords
-    await insertEntities(authors, "authors", "author_id");
-    await insertEntities(categories, "category", "category_id");
-    await insertEntities(keywords, "keywords", "keyword_id");
+        const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
+        const filename = req.file.filename;
 
-    // Respond with success message and Drive file ID
-    res.status(201).json({ message: "Document Uploaded Successfully", driveFileId });
-  } catch (error) {
-    console.error("Error Uploading Document:", error);
-    res.status(500).json({ error: error.message || "Failed to upload document!" });
-  }
+        // Validate uploader_id (you may want to add more validation)
+        if (!uploader_id || isNaN(uploader_id)) {
+            return res.status(400).json({ error: 'Invalid uploader ID!' });
+        }
+
+        // Check the roleId of the uploader
+        const [uploader] = await db.query('SELECT role_id FROM users WHERE user_id = ?', [uploader_id]);
+        if (uploader.length === 0) {
+            return res.status(404).json({ error: 'Uploader not found!' });
+        }
+
+        const role_id = uploader[0].role_id;
+        console.log('Uploader roleId:', role_id); // Debugging step to log the roleId
+
+        // Set the default status
+        let status = 'pending';
+        if (role_id === 1) {
+            console.log('Uploader is Admin, setting status to approved'); 
+            status = 'approved';
+        } else {
+            console.log('Uploader is not Admin, setting status to pending'); 
+        }
+
+        // Check if title already exists
+        const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
+        if (existingDocument.length > 0) {
+            return res.status(409).json({ error: 'Document with this title already exists!' });
+        }
+
+        // Insert research with dynamic status
+        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)', [title, abstract, filename, uploader_id, status]);
+        const researchId = result.insertId;
+        console.log('Inserted Research ID:', researchId); // Debugging step
+
+        // Insert authors
+        const insertAuthors = async (researchId, authors) => {
+            const authorNames = authors.split(',').map(name => name.trim());
+            for (const name of authorNames) {
+                let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
+                if (author.length === 0) {
+                    const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [name]);
+                    author = { author_id: result.insertId };
+                } else {
+                    author = author[0];
+                }
+                await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+            }
+        };
+
+        await insertAuthors(researchId, authors);
+
+        // Insert categories
+        const insertCategories = async (researchId, categories) => {
+            const categoryNames = categories.split(',').map(name => name.trim());
+            for (const name of categoryNames) {
+                let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
+                if (category.length === 0) {
+                    const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
+                    category = { category_id: result.insertId };
+                } else {
+                    category = category[0];
+                }
+                await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
+            }
+        };
+
+        await insertCategories(researchId, categories);
+
+        // Insert keywords
+        const insertKeywords = async (researchId, keywords) => {
+            const keywordNames = keywords.split(',').map(name => name.trim());
+            for (const name of keywordNames) {
+                let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+                if (keyword.length === 0) {
+                    const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+                    keyword = { keyword_id: result.insertId };
+                } else {
+                    keyword = keyword[0];
+                }
+                await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
+            }
+        };
+
+        await insertKeywords(researchId, keywords);
+
+        res.status(201).json({ message: 'Document Uploaded Successfully' });
+    } catch (error) {
+        console.error('Error Upload Document:', error);
+        res.status(500).json({ error: 'Upload Document Endpoint Error!' });
+    }
 });
 
 module.exports = router;
+
