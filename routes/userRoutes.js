@@ -63,7 +63,6 @@ router.post('/register', async (req, res) => {
 });
 
 
-
 router.get('/users/all', async (req, res) => {
     try {
       // SQL query to fetch all items from the 'users' table
