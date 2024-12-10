@@ -71,7 +71,7 @@ router.patch('/research/reject/:research_id', async (req, res) => {
 
 
 
-// View the research
+
 // View the research
 router.get('/research/:research_id', async (req, res) => {
   try {
