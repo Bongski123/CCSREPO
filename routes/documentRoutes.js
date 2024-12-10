@@ -2,8 +2,6 @@ const express = require("express");
 const db = require("../database/db");
 const { authenticateToken, isAdmin } = require("../authentication/middleware");
 const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
 const { google } = require("googleapis");
 const router = express.Router();
 require("dotenv").config(); // Load environment variables
@@ -30,20 +28,7 @@ const drive = google.drive({ version: "v3", auth });
 
 // Multer Setup for File Uploads
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadsDir = path.join(__dirname, 'uploads');
-
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-      cb(null, `${Date.now()}-${file.originalname}`);
-    },
-  }),
+  storage: multer.memoryStorage(),  // Use memoryStorage to store file in memory, not local disk
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "application/pdf") {
       cb(null, true);
@@ -65,8 +50,6 @@ const sanitizeTableName = (table) => {
 
 // File Upload Route
 router.post("/upload", upload.single("file"), async (req, res) => {
-  const filePath = req.file ? path.resolve(__dirname, `./uploads/${req.file.filename}`) : null;
-
   try {
     // Check if file is uploaded
     if (!req.file) {
@@ -75,7 +58,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Extract form data
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
-    const fileName = req.file.filename;
+    const fileName = req.file.originalname;
 
     // Validate uploader ID
     if (!uploader_id || isNaN(uploader_id)) throw new Error("Invalid uploader ID!");
@@ -90,11 +73,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
     if (existingDocument.length > 0) throw new Error("Document with this title already exists!");
 
-    // Ensure file exists before uploading to Google Drive
-    if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
-      throw new Error("Invalid file path: File does not exist or is a directory");
-    }
-
     // Google Drive upload metadata
     const fileMetadata = {
       name: fileName,
@@ -102,7 +80,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     };
     const media = {
       mimeType: "application/pdf",
-      body: fs.createReadStream(filePath),
+      body: req.file.buffer,  // Use the file buffer directly from memory
     };
 
     // Upload file to Google Drive
@@ -143,16 +121,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     await insertEntities(categories, "category", "category_id");
     await insertEntities(keywords, "keywords", "keyword_id");
 
-    // Clean up the local uploaded file after successful upload
-    fs.unlinkSync(filePath);
-
     // Respond with success message and Drive file ID
     res.status(201).json({ message: "Document Uploaded Successfully", driveFileId });
   } catch (error) {
     console.error("Error Uploading Document:", error);
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // Clean up the file in case of error
-    }
     res.status(500).json({ error: error.message || "Failed to upload document!" });
   }
 });
