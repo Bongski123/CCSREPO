@@ -14,7 +14,8 @@ const router = express.Router();
 require("dotenv").config(); // For loading environment variables
 
 // Google Drive configuration
-const KEYFILEPATH = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(__dirname, "../service-account.json");
+
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
