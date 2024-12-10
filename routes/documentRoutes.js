@@ -78,6 +78,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
 
+    // Clean or sanitize the filename (if needed)
+    const cleanedFileName = req.file.originalname.replace(/\s+/g, "_").toLowerCase(); // Example: Replace spaces with underscores
+
     // Upload file to Google Drive
     const fileMetadata = {
       name: cleanedFileName,  // Use the cleaned file name
@@ -120,14 +123,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Insert research with the file ID from Google Drive
-   // Insert research with the original filename and the file ID from Google Drive
-const [result] = await db.query(
-  "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)",
-  [title, abstract, cleanedFileName, uploader_id, status]  // Use req.file.originalname here
-);
+    const [result] = await db.query(
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+      [title, abstract, cleanedFileName, uploader_id, status, fileId]
+    );
 
-const researchId = result.insertId;
-
+    const researchId = result.insertId;
 
     // Insert authors, categories, and keywords (use your existing logic)
 
