@@ -182,4 +182,53 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+// DELETE research and associated records
+router.delete('/delete-research/:research_id', async (req, res) => {
+  const researchId = req.params.research_id;
+
+  if (!researchId) {
+      return res.status(400).json({ message: 'Research ID is required.' });
+  }
+
+  // Start a transaction
+  const connection = await db.getConnection(); // Assuming you're using a connection pool
+  await connection.beginTransaction();
+
+  try {
+      // Deleting associated records
+      const queries = [
+          'DELETE FROM research_categories WHERE research_id = ?',
+          'DELETE FROM search_logs WHERE research_id = ?',
+          'DELETE FROM collections WHERE id = ?',
+          'DELETE FROM notifications WHERE notification_id = ?',
+          'DELETE FROM research_keywords WHERE research_id = ?',
+          'DELETE FROM research_authors WHERE research_id = ?',
+          'DELETE FROM researches WHERE research_id = ?'
+      ];
+
+      for (const query of queries) {
+          await connection.execute(query, [researchId]);
+      }
+
+      // Commit the transaction
+      await connection.commit();
+      res.status(200).json({ message: 'Research and associated records deleted successfully.' });
+  } catch (error) {
+      // Rollback the transaction in case of an error
+      await connection.rollback();
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred while deleting the research.' });
+  } finally {
+      // Release the connection
+      connection.release();
+  }
+});
+
 module.exports = router;
