@@ -82,8 +82,9 @@ router.get('/pdf/:research_id', async (req, res) => {
             // List files in the Google Drive folder to verify the file exists
             const fileListResponse = await drive.files.list({
                 q: `'${folderId}' in parents and name = '${fileId}'`,
-                fields: 'files(fileId, name)',
+                fields: 'files(id, name)', // Use 'id' instead of 'fileId'
             });
+            
 
             if (fileListResponse.data.files.length === 0) {
                 return res.status(404).send('File not found in the specified folder');
