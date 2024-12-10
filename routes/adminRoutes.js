@@ -136,19 +136,24 @@ GROUP BY
 // View all researches
 router.get("/researches", async (req, res) => {
   try {
-    const [researches] = await db.query(`SELECT r.research_id, r.title, r.publish_date, r.abstract, r.filename, r.status, 
+    const getResearchesQuery = `SELECT r.research_id, r.title, r.publish_date, r.abstract, r.filename, r.status, 
              r.viewCount, r.downloadCount, r.citeCount,
              GROUP_CONCAT(a.author_name) AS authors
       FROM researches r
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
-      GROUP BY r.research_id`);
-    res.status(200).json(researches);
+      GROUP BY r.research_id`;
+
+    const [researches] = await db.query(getResearchesQuery);
+
+    if (researches.length === 0) {
+      return res.status(404).json({ error: "No researches found!" });
+    }
+
+    res.status(200).json({ researches });
   } catch (error) {
     console.error("Error getting researches:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while getting researches" });
+    res.status(500).json({ error: "An error occurred while getting researches" });
   }
 });
 
