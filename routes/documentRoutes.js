@@ -78,64 +78,68 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
 
-    // Upload file to Google Drive
-    const fileMetadata = {
-      name: cleanedFileName,  // Use the cleaned file name
-      parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
-    };
-
-    const media = {
-      mimeType: req.file.mimetype,
-      body: bufferToStream(req.file.buffer),
-    };
-
-    const driveResponse = await drive.files.create({
-      resource: fileMetadata,
-      media,
-      fields: "id",
-    });
-
-    const fileId = driveResponse.data.id;
-
-    // Validate uploader_id
-    if (!uploader_id || isNaN(uploader_id)) {
-      return res.status(400).json({ error: "Invalid uploader ID!" });
+    if (!title || !abstract || !uploader_id) {
+      return res.status(400).json({ error: "Missing required fields!" });
     }
 
-    // Check the roleId of the uploader
-    const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
-    if (uploader.length === 0) {
-      return res.status(404).json({ error: "Uploader not found!" });
+    console.log("Processing upload for:", req.file.originalname);
+
+    const cleanedFileName = req.file.originalname.replace(/^\d+-/, '');
+    console.log("Cleaned filename:", cleanedFileName);
+
+    // Upload to Google Drive
+    try {
+      const fileMetadata = {
+        name: cleanedFileName,
+        parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"],
+      };
+
+      const media = {
+        mimeType: req.file.mimetype,
+        body: bufferToStream(req.file.buffer),
+      };
+
+      const driveResponse = await drive.files.create({
+        resource: fileMetadata,
+        media,
+        fields: "id",
+      });
+
+      console.log("Google Drive response:", driveResponse.data);
+
+      const fileId = driveResponse.data.id;
+
+      // Validate uploader_id
+      const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
+      if (uploader.length === 0) {
+        return res.status(404).json({ error: "Uploader not found!" });
+      }
+
+      const role_id = uploader[0].role_id;
+      const status = role_id === 1 ? "approved" : "pending";
+
+      // Check for duplicate title
+      const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
+      if (existingDocument.length > 0) {
+        return res.status(409).json({ error: "Document with this title already exists!" });
+      }
+
+      // Insert research into the database
+      const [result] = await db.query(
+        "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)",
+        [title, abstract, cleanedFileName, uploader_id, status]
+      );
+
+      console.log("Database insert result:", result);
+
+      res.status(201).json({ message: "Document Uploaded Successfully", fileId });
+    } catch (googleError) {
+      console.error("Google Drive upload error:", googleError);
+      res.status(500).json({ error: "Error uploading to Google Drive!" });
     }
-
-    const role_id = uploader[0].role_id;
-
-    // Set the default status
-    let status = role_id === 1 ? "approved" : "pending";
-
-    // Check if title already exists
-    const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
-    if (existingDocument.length > 0) {
-      return res.status(409).json({ error: "Document with this title already exists!" });
-    }
-
-    // Insert research with the file ID from Google Drive
-   // Insert research with the original filename and the file ID from Google Drive
-const [result] = await db.query(
-  "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)",
-  [title, abstract, cleanedFileName, uploader_id, status]  // Use req.file.originalname here
-);
-
-const researchId = result.insertId;
-
-
-    // Insert authors, categories, and keywords (use your existing logic)
-
-    res.status(201).json({ message: "Document Uploaded Successfully", fileId });
   } catch (error) {
     console.error("Error Upload Document:", error);
     res.status(500).json({ error: "Upload Document Endpoint Error!" });
   }
 });
-
 module.exports = router;
