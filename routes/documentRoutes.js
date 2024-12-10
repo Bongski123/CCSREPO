@@ -32,11 +32,13 @@ const drive = google.drive({ version: "v3", auth });
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const uploadDir = path.resolve(__dirname, "./uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      const uploadsDir = path.join(__dirname, 'uploads');
+
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
       }
-      cb(null, uploadDir);
+
+      cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
       cb(null, `${Date.now()}-${file.originalname}`);
