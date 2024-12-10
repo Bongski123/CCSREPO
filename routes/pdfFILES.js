@@ -53,15 +53,15 @@ const googleServiceAccount = {
 const auth = new google.auth.GoogleAuth({
     credentials: googleServiceAccount, // Using credentials object directly
     scopes: ["https://www.googleapis.com/auth/drive"],
-  });
-  
+});
+
 const drive = google.drive({
     version: "v3",
     auth,
 });
 
-// Folder ID for the Google Drive folder where PDFs are stored
-const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc"; // Replace with your actual folder ID
+// Folder ID for the Google Drive folder where PDFs are stored (from .env)
+const folderId = process.env.GOOGLE_FOLDER_ID;
 
 // API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
@@ -72,7 +72,7 @@ router.get('/pdf/:research_id', async (req, res) => {
         const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
-            const fileId = result[0].file_id; // Assuming 'filename' holds the Google Drive file ID
+            const fileId = result[0].filename; // Assuming 'filename' holds the Google Drive file ID
             console.log('Retrieved fileId from database:', fileId); // Debugging log
 
             if (!fileId) {
@@ -82,7 +82,7 @@ router.get('/pdf/:research_id', async (req, res) => {
             // List files in the Google Drive folder to verify the file exists
             const fileListResponse = await drive.files.list({
                 q: `'${folderId}' in parents and name = '${fileId}'`,
-                fields: 'files(file_id, name)',
+                fields: 'files(fileId, name)',
             });
 
             if (fileListResponse.data.files.length === 0) {
@@ -94,7 +94,7 @@ router.get('/pdf/:research_id', async (req, res) => {
 
             // Download the file from Google Drive
             const driveResponse = await drive.files.get({
-                fileId: file.file_id,
+                fileId: file.fileId,
                 alt: 'media',
             });
 
