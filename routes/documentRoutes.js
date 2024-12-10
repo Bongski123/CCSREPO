@@ -1,23 +1,16 @@
 const express = require("express");
 const db = require("../database/db");
-const {
-  authenticateToken,
-  isAdmin,
-  isNCFUser,
-  isNotNCFUser,
-} = require("../authentication/middleware");
+const { authenticateToken, isAdmin } = require("../authentication/middleware");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 const router = express.Router();
-require("dotenv").config(); // For loading environment variables
-const KEYFILEPATH = path.resolve(__dirname, "/opt/render/project/src/service-account.json");
-console.log("Key file path:", KEYFILEPATH);
+require("dotenv").config(); // Load environment variables
+
+// Google Drive Setup
+const KEYFILEPATH = path.resolve(__dirname, "../service-account.json");
 process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
-// Google Drive configuration
-
-
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
@@ -25,7 +18,7 @@ const auth = new google.auth.GoogleAuth({
 });
 const drive = google.drive({ version: "v3", auth });
 
-// Configure multer for file uploads
+// Configure Multer for File Uploads
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -48,13 +41,14 @@ const upload = multer({
   },
 });
 
-// Helper function to sanitize table names
+// Sanitize Table Name Helper
 const sanitizeTableName = (table) => {
   const validTables = ["authors", "category", "keywords"];
   if (!validTables.includes(table)) throw new Error("Invalid table name");
   return table;
 };
 
+// File Upload Route
 router.post("/upload", upload.single("file"), async (req, res) => {
   const filePath = req.file ? path.resolve(__dirname, `./uploads/${req.file.filename}`) : null;
   try {
@@ -65,29 +59,22 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
     const fileName = req.file.filename;
 
-    // Validate uploader_id
-    if (!uploader_id || isNaN(uploader_id)) {
-      throw new Error("Invalid uploader ID!");
-    }
+    if (!uploader_id || isNaN(uploader_id)) throw new Error("Invalid uploader ID!");
 
-    // Check the uploader's role
+    // Validate and check role
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
-    if (uploader.length === 0) {
-      throw new Error("Uploader not found!");
-    }
+    if (uploader.length === 0) throw new Error("Uploader not found!");
     const role_id = uploader[0].role_id;
     const status = role_id === 1 ? "approved" : "pending";
 
-    // Check if the title already exists
+    // Check for duplicate title
     const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
-    if (existingDocument.length > 0) {
-      throw new Error("Document with this title already exists!");
-    }
+    if (existingDocument.length > 0) throw new Error("Document with this title already exists!");
 
-    // Upload the file to Google Drive
+    // Upload to Google Drive
     const fileMetadata = {
       name: fileName,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID], // Set your Google Drive folder ID in .env
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
     };
     const media = {
       mimeType: "application/pdf",
@@ -101,7 +88,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const driveFileId = driveResponse.data.id;
 
-    // Insert research metadata into the database
+    // Insert Metadata to Database
     const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, drive_file_id, status) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
       [title, abstract, fileName, uploader_id, driveFileId, status]
@@ -109,8 +96,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const researchId = result.insertId;
 
-    // Insert authors, categories, and keywords
-    const insertEntities = async (researchId, entities, table, columnName) => {
+    // Insert Authors, Categories, and Keywords
+    const insertEntities = async (entities, table, columnName) => {
       const sanitizedTable = sanitizeTableName(table);
       const names = entities.split(",").map((name) => name.trim());
       for (const name of names) {
@@ -126,18 +113,18 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
-    await insertEntities(researchId, authors, "authors", "author_id");
-    await insertEntities(researchId, categories, "category", "category_id");
-    await insertEntities(researchId, keywords, "keywords", "keyword_id");
+    await insertEntities(authors, "authors", "author_id");
+    await insertEntities(categories, "category", "category_id");
+    await insertEntities(keywords, "keywords", "keyword_id");
 
-    // Clean up: Delete local file
+    // Clean up local file
     fs.unlinkSync(filePath);
 
     res.status(201).json({ message: "Document Uploaded Successfully", driveFileId });
   } catch (error) {
     console.error("Error Uploading Document:", error);
     if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // Delete the uploaded file on error
+      fs.unlinkSync(filePath); // Cleanup local file
     }
     res.status(500).json({ error: error.message || "Failed to upload document!" });
   }
