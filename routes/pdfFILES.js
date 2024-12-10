@@ -49,9 +49,8 @@ const googleServiceAccount = {
     universe_domain: "googleapis.com",
   };
 // Google Drive API setup using service account
-
 const auth = new google.auth.GoogleAuth({
-    credentials: googleServiceAccount, // Using credentials object directly
+    credentials: googleServiceAccount,
     scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
@@ -60,8 +59,7 @@ const drive = google.drive({
     auth,
 });
 
-// Folder ID for the Google Drive folder where PDFs are stored (from .env)
-const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc";
+const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc"; // Google Drive folder ID
 
 // API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
@@ -80,38 +78,50 @@ router.get('/pdf/:research_id', async (req, res) => {
             }
 
             // List files in the Google Drive folder to verify the file exists
-          // List files in the Google Drive folder to verify the file exists
-const fileListResponse = await drive.files.list({
-    q: `'${folderId}' in parents and name = '${fileId}'`,
-    fields: 'files(id, name)', // Use 'id' instead of 'fileId'
-});
+            const fileListResponse = await drive.files.list({
+                q: `'${folderId}' in parents and name = '${fileId}'`,
+                fields: 'files(id, name)',
+            });
 
-if (fileListResponse.data.files.length === 0) {
-    return res.status(404).send('File not found in the specified folder');
-}
+            if (fileListResponse.data.files.length === 0) {
+                return res.status(404).send('File not found in the specified folder');
+            }
 
-const file = fileListResponse.data.files[0];
-console.log('File found in folder:', file);
+            const file = fileListResponse.data.files[0];
+            console.log('File found in folder:', file);
 
-// Download the file from Google Drive
-const driveResponse = await drive.files.get({
-    fileId: file.id, // Correct field name
-    alt: 'media',
-});
+            // Streaming the file content from Google Drive
+            drive.files.get({
+                fileId: file.id, // Correct field name
+                alt: 'media', // Media stream
+                responseType: 'stream',  // Streaming response
+            }).then(driveResponse => {
+                // Set appropriate headers for PDF
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
 
-// Set appropriate content type for the PDF
-res.setHeader('Content-Type', 'application/pdf');
-res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
-res.send(driveResponse.data);
-
+                // Pipe the streamed file directly to the response
+                driveResponse.data
+                    .on('end', () => {
+                        console.log('File streamed successfully');
+                    })
+                    .on('error', (err) => {
+                        console.error('Error while streaming the file:', err);
+                        res.status(500).send('Error streaming the file');
+                    })
+                    .pipe(res); // Pipe the PDF stream to the response
+            }).catch(err => {
+                console.error('Error retrieving the file from Google Drive:', err);
+                res.status(500).send('Error retrieving the file from Google Drive');
+            });
 
         } else {
             res.status(404).send('Research not found');
         }
-  } catch (err) {
-    console.error("Error retrieving file:", err.message); // Log the error message
-    res.status(500).send('Internal Server Error');
-}
+    } catch (err) {
+        console.error("Error retrieving file:", err.message); // Log the error message
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 module.exports = router;
