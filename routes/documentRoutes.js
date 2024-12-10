@@ -9,14 +9,21 @@ const router = express.Router();
 require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
-const KEYFILEPATH = path.resolve(__dirname, '../service-account.json'); // Path to Google Service Account Key
-process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(__dirname, '../service-account.json');
-
-
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILEPATH,
-  scopes: SCOPES
+  credentials: {
+    type: process.env.GOOGLE_TYPE,
+    project_id: process.env.GOOGLE_PROJECT_ID,
+    private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Ensure proper newlines in private_key
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    auth_uri: process.env.GOOGLE_AUTH_URI,
+    token_uri: process.env.GOOGLE_TOKEN_URI,
+    auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_X509_CERT_URL,
+    client_x509_cert_url: process.env.GOOGLE_CLIENT_X509_CERT_URL,
+    universe_domain: process.env.GOOGLE_UNIVERSE_DOMAIN,
+  }
 });
 
 const drive = google.drive({ version: "v3", auth });
@@ -89,7 +96,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Google Drive upload metadata
     const fileMetadata = {
       name: fileName,
-      parents:  '1z4LekckQJPlZbgduf5FjDQob3zmtAElc' // Default folder if not set in .env
+      parents: process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc' // Default folder if not set
     };
     const media = {
       mimeType: "application/pdf",
