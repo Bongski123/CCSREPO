@@ -51,9 +51,8 @@ const googleServiceAccount = {
 // Google Drive API setup using service account
 const auth = new google.auth.GoogleAuth({
     credentials: googleServiceAccount,
-    scopes: ["https://www.googleapis.com/auth/drive"],
+    scopes: ["https://www.googleapis.com/auth/drive/file"], // Required scope for file access
 });
-
 const drive = google.drive({
     version: "v3",
     auth,
