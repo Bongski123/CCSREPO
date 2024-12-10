@@ -80,7 +80,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Upload file to Google Drive
     const fileMetadata = {
-      name: `${Date.now()}-${req.file.originalname}`,
+      name: cleanedFileName,  // Use the cleaned file name
       parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
     };
 
@@ -123,7 +123,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
    // Insert research with the original filename and the file ID from Google Drive
 const [result] = await db.query(
   "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)",
-  [title, abstract, req.file.originalname, uploader_id, status]  // Use req.file.originalname here
+  [title, abstract, cleanedFileName, uploader_id, status]  // Use req.file.originalname here
 );
 
 const researchId = result.insertId;
