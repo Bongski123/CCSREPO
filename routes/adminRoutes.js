@@ -81,6 +81,7 @@ router.get('/research/:research_id', async (req, res) => {
     const getResearchQuery = `
  SELECT 
     r.*,  
+    r.publish_date,  
     GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
     GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
     GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
@@ -99,9 +100,10 @@ LEFT JOIN
 LEFT JOIN 
     category c ON rc.category_id = c.category_id 
 WHERE 
-    r.research_id = ?  -- Keep this filter if you want a specific research
+    r.research_id = ? 
 GROUP BY 
     r.research_id;
+
 
     `;
 
