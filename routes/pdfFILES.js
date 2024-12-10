@@ -90,27 +90,20 @@ router.get('/pdf/:research_id', async (req, res) => {
             const file = fileListResponse.data.files[0];
             console.log('File found in folder:', file);
 
-            // Streaming the file content from Google Drive
+            // Directly fetch file content and send it as a response
             drive.files.get({
                 fileId: file.id, // Correct field name
                 alt: 'media', // Media stream
-                responseType: 'stream',  // Streaming response
-            }).then(driveResponse => {
+            }, { responseType: 'arraybuffer' })  // Use arraybuffer for file data
+            .then(driveResponse => {
                 // Set appropriate headers for PDF
                 res.setHeader('Content-Type', 'application/pdf');
                 res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
-
-                // Pipe the streamed file directly to the response
-                driveResponse.data
-                    .on('end', () => {
-                        console.log('File streamed successfully');
-                    })
-                    .on('error', (err) => {
-                        console.error('Error while streaming the file:', err);
-                        res.status(500).send('Error streaming the file');
-                    })
-                    .pipe(res); // Pipe the PDF stream to the response
-            }).catch(err => {
+                
+                // Send the file data as a buffer
+                res.send(driveResponse.data);
+            })
+            .catch(err => {
                 console.error('Error retrieving the file from Google Drive:', err);
                 res.status(500).send('Error retrieving the file from Google Drive');
             });
