@@ -49,6 +49,7 @@ const googleServiceAccount = {
     universe_domain: "googleapis.com",
   };
 // Google Drive API setup using service account
+
 const auth = new google.auth.GoogleAuth({
     credentials: googleServiceAccount,
     scopes: ["https://www.googleapis.com/auth/drive"],
@@ -78,7 +79,7 @@ router.get('/pdf/:research_id', async (req, res) => {
 
             // List files in the Google Drive folder to verify the file exists
             const fileListResponse = await drive.files.list({
-                q: `'${folderId}' in parents and id = '${fileId}'`, // Using 'id' for exact file search
+                q: `'${folderId}' in parents and trashed = false and id = '${fileId}'`, // Searching by both parent folder and file ID
                 fields: 'files(id, name)',
             });
 
