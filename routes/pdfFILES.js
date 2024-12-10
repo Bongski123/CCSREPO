@@ -49,9 +49,8 @@ const googleServiceAccount = {
     universe_domain: "googleapis.com",
   };
 // Google Drive API setup using service account
-
 const auth = new google.auth.GoogleAuth({
-    credentials: googleServiceAccount, // Using credentials object directly
+    credentials: googleServiceAccount,
     scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
@@ -60,19 +59,17 @@ const drive = google.drive({
     auth,
 });
 
-// Folder ID for the Google Drive folder where PDFs are stored (from .env)
-const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc";
+const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc"; // The Google Drive folder ID where the PDFs are stored
 
-// API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
     const researchID = req.params.research_id;
 
     try {
-        // Retrieve file ID from the database based on research ID
+        // Retrieve the file_id from the database based on the research ID
         const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
-            const fileId = result[0].file_id; // Assuming 'filename' holds the Google Drive file ID
+            const fileId = result[0].file_id; // Assuming 'file_id' holds the actual Google Drive file ID
             console.log('Retrieved fileId from database:', fileId); // Debugging log
 
             if (!fileId) {
@@ -81,8 +78,8 @@ router.get('/pdf/:research_id', async (req, res) => {
 
             // List files in the Google Drive folder to verify the file exists
             const fileListResponse = await drive.files.list({
-                q: `'${folderId}' in parents and name = '${fileId}'`,
-                fields: 'files(id, name)', // Use 'id' instead of 'fileId'
+                q: `'${folderId}' in parents and id = '${fileId}'`, // Using 'id' for exact file search
+                fields: 'files(id, name)',
             });
 
             if (fileListResponse.data.files.length === 0) {
@@ -94,13 +91,13 @@ router.get('/pdf/:research_id', async (req, res) => {
 
             // Download the file from Google Drive
             const driveResponse = await drive.files.get({
-                fileId: file.id, // Correct field name
+                fileId: file.id,
                 alt: 'media',
             });
 
-            // Set the appropriate headers to display PDF inline
+            // Set the appropriate headers to display PDF inline in the browser
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline; filename="' + file.name + '"');
+            res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
 
             // Send the PDF content to the browser
             res.send(driveResponse.data);
@@ -112,7 +109,5 @@ router.get('/pdf/:research_id', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-
-
 
 module.exports = router;
