@@ -96,8 +96,7 @@ router.get('/pdf/:research_id', async (req, res) => {
     res.send(Buffer.from(driveResponse.data));
 
  
-                // Send the file data
-                res.send(Buffer.from(driveResponse.data)); // Convert binary data to Buffer and send it
+              
             } catch (err) {
                 console.error('Error retrieving the file from Google Drive:', err.message);
                 res.status(500).send('Error retrieving the file from Google Drive');
