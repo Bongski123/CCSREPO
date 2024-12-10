@@ -12,7 +12,7 @@ require("dotenv").config(); // Load environment variables
 const KEYFILEPATH = path.resolve(__dirname, '../service-account.json'); // Path to Google Service Account Key
 process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
 
-const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
   scopes: SCOPES
@@ -88,7 +88,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Google Drive upload metadata
     const fileMetadata = {
       name: fileName,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc'], // Default folder if not set in .env
+      parents:  '1z4LekckQJPlZbgduf5FjDQob3zmtAElc' // Default folder if not set in .env
     };
     const media = {
       mimeType: "application/pdf",
@@ -106,8 +106,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Insert research metadata into database
     const [result] = await db.query(
-      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, drive_file_id, status) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
-      [title, abstract, fileName, uploader_id, driveFileId, status]
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, drive_file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+      [title, abstract, fileName, uploader_id, status, driveFileId] // Store Google Drive file ID in the database
     );
     const researchId = result.insertId;
 
