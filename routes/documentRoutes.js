@@ -102,12 +102,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       const driveResponse = await drive.files.create({
         resource: fileMetadata,
         media,
-        fields: "file_id",
+        fields: "id",
       });
 
       console.log("Google Drive response:", driveResponse.data);
 
-      const fileId = driveResponse.data.file_id;
+      const fileId = driveResponse.data.id;
 
       // Validate uploader_id
       const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
@@ -124,10 +124,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         return res.status(409).json({ error: "Document with this title already exists!" });
       }
 
-      // Insert research into the database, including the fileId
+      // Insert research into the database
       const [result] = await db.query(
-        "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
-        [title, abstract, cleanedFileName, uploader_id, status, fileId]
+        "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)",
+        [title, abstract, cleanedFileName, uploader_id, status]
       );
 
       console.log("Database insert result:", result);
@@ -142,5 +142,4 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Upload Document Endpoint Error!" });
   }
 });
-
 module.exports = router;
