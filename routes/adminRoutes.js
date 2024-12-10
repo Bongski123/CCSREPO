@@ -134,7 +134,7 @@ GROUP BY
 
 
 // View all researches
-outer.get("/researches", async (req, res) => {
+router.get("/researches", async (req, res) => {
   try {
     const [researches] = await db.query(`SELECT r.research_id, r.title, r.publish_date, r.abstract, r.filename, r.status, 
              r.viewCount, r.downloadCount, r.citeCount,
@@ -151,6 +151,9 @@ outer.get("/researches", async (req, res) => {
       .json({ error: "An error occurred while getting researches" });
   }
 }); 
+
+
+
 router.get("/researches/rejected", async (req, res) => {
   try {
     const { notificationId } = req.query; // Optionally filter by notificationId
