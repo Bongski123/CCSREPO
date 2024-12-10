@@ -80,28 +80,29 @@ router.get('/pdf/:research_id', async (req, res) => {
             }
 
             // List files in the Google Drive folder to verify the file exists
-            const fileListResponse = await drive.files.list({
-                q: `'${folderId}' in parents and name = '${fileId}'`,
-                fields: 'files(id, name)', // Use 'id' instead of 'fileId'
-            });
-            
+          // List files in the Google Drive folder to verify the file exists
+const fileListResponse = await drive.files.list({
+    q: `'${folderId}' in parents and name = '${fileId}'`,
+    fields: 'files(id, name)', // Use 'id' instead of 'fileId'
+});
 
-            if (fileListResponse.data.files.length === 0) {
-                return res.status(404).send('File not found in the specified folder');
-            }
+if (fileListResponse.data.files.length === 0) {
+    return res.status(404).send('File not found in the specified folder');
+}
 
-            const file = fileListResponse.data.files[0];
-            console.log('File found in folder:', file);
+const file = fileListResponse.data.files[0];
+console.log('File found in folder:', file);
 
-            // Download the file from Google Drive
-            const driveResponse = await drive.files.get({
-                fileId: file.fileId,
-                alt: 'media',
-            });
+// Download the file from Google Drive
+const driveResponse = await drive.files.get({
+    fileId: file.id,  // Use 'id' here
+    alt: 'media',
+});
 
-            // Set appropriate content type for the PDF
-            res.setHeader('Content-Type', 'application/pdf');
-            res.send(driveResponse.data);
+// Set appropriate content type for the PDF
+res.setHeader('Content-Type', 'application/pdf');
+res.send(driveResponse.data);
+
         } else {
             res.status(404).send('Research not found');
         }
