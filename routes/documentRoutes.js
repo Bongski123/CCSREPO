@@ -202,20 +202,23 @@ router.delete('/delete-research/:research_id', async (req, res) => {
   await connection.beginTransaction();
 
   try {
-      // Deleting associated records
+      // Delete associated records first
       const queries = [
           'DELETE FROM research_categories WHERE research_id = ?',
           'DELETE FROM search_logs WHERE research_id = ?',
           'DELETE FROM collections WHERE research_id = ?',
-          'DELETE FROM notifications WHERE notification_id = ?',
+          'DELETE FROM notifications WHERE research_id = ?',
           'DELETE FROM research_keywords WHERE research_id = ?',
-          'DELETE FROM research_authors WHERE research_id = ?',
-          'DELETE FROM researches WHERE research_id = ?'
+          'DELETE FROM research_authors WHERE research_id = ?'
       ];
 
       for (const query of queries) {
           await connection.execute(query, [researchId]);
       }
+
+      // Now delete the main research record
+      const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
+      await connection.execute(deleteResearchQuery, [researchId]);
 
       // Commit the transaction
       await connection.commit();
