@@ -67,7 +67,7 @@ router.get('/pdf/:research_id', async (req, res) => {
 
     try {
         // Retrieve the file_id from the database based on the research ID
-        const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
+        const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
             const fileId = result[0].file_id; // Assuming 'file_id' holds the actual Google Drive file ID
