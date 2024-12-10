@@ -51,7 +51,7 @@ const googleServiceAccount = {
 // Google Drive API setup using service account
 
 const auth = new google.auth.GoogleAuth({
-    credentials: googleServiceAccount,
+    credentials: googleServiceAccount, // Using credentials object directly
     scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
@@ -60,17 +60,19 @@ const drive = google.drive({
     auth,
 });
 
-const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc"; // The Google Drive folder ID where the PDFs are stored
+// Folder ID for the Google Drive folder where PDFs are stored (from .env)
+const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc";
 
+// API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
     const researchID = req.params.research_id;
 
     try {
-        // Retrieve the file_id from the database based on the research ID
+        // Retrieve file ID from the database based on research ID
         const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
-            const fileId = result[0].file_id; // Assuming 'file_id' holds the actual Google Drive file ID
+            const fileId = result[0].filename; // Assuming 'filename' holds the Google Drive file ID
             console.log('Retrieved fileId from database:', fileId); // Debugging log
 
             if (!fileId) {
@@ -78,37 +80,38 @@ router.get('/pdf/:research_id', async (req, res) => {
             }
 
             // List files in the Google Drive folder to verify the file exists
-            const fileListResponse = await drive.files.list({
-                q: `'${folderId}' in parents and trashed = false and id = '${fileId}'`, // Searching by both parent folder and file ID
-                fields: 'files(id, name)',
-            });
+          // List files in the Google Drive folder to verify the file exists
+const fileListResponse = await drive.files.list({
+    q: `'${folderId}' in parents and name = '${fileId}'`,
+    fields: 'files(id, name)', // Use 'id' instead of 'fileId'
+});
 
-            if (fileListResponse.data.files.length === 0) {
-                return res.status(404).send('File not found in the specified folder');
-            }
+if (fileListResponse.data.files.length === 0) {
+    return res.status(404).send('File not found in the specified folder');
+}
 
-            const file = fileListResponse.data.files[0];
-            console.log('File found in folder:', file);
+const file = fileListResponse.data.files[0];
+console.log('File found in folder:', file);
 
-            // Download the file from Google Drive
-            const driveResponse = await drive.files.get({
-                fileId: file.id,
-                alt: 'media',
-            });
+// Download the file from Google Drive
+const driveResponse = await drive.files.get({
+    fileId: file.id, // Correct field name
+    alt: 'media',
+});
 
-            // Set the appropriate headers to display PDF inline in the browser
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
+// Set appropriate content type for the PDF
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
+res.send(driveResponse.data);
 
-            // Send the PDF content to the browser
-            res.send(driveResponse.data);
+
         } else {
             res.status(404).send('Research not found');
         }
-    } catch (err) {
-        console.error("Error retrieving file:", err.message); // Log the error message
-        res.status(500).send('Internal Server Error');
-    }
+  } catch (err) {
+    console.error("Error retrieving file:", err.message); // Log the error message
+    res.status(500).send('Internal Server Error');
+}
 });
 
 module.exports = router;
