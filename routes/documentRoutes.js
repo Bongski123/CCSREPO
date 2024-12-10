@@ -4,6 +4,7 @@ const { authenticateToken, isAdmin } = require("../authentication/middleware");
 const multer = require("multer");
 const { google } = require("googleapis");
 const router = express.Router();
+const streamifier = require("streamifier"); // Import streamifier
 require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
@@ -78,9 +79,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       name: fileName,
       parents: process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc' // Default folder if not set
     };
+
+    // Convert Buffer to Readable Stream
     const media = {
       mimeType: "application/pdf",
-      body: req.file.buffer,  // Use the file buffer directly from memory
+      body: streamifier.createReadStream(req.file.buffer),  // Convert the buffer to a stream
     };
 
     // Upload file to Google Drive
