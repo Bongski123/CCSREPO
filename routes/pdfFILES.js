@@ -67,27 +67,31 @@ router.get('/pdf/:research_id', async (req, res) => {
         const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
-            const fileId = result[0].file_id; // Get file_id from the database
-            console.log('Retrieved fileId from database:', fileId); // Debugging log
+            const fileId = result[0].file_id;
 
             if (!fileId) {
                 return res.status(404).send('File ID is missing in the database');
             }
 
-            // Fetch the file directly from Google Drive using the file_id
             try {
+                // Fetch file metadata (e.g., name)
+                const metadataResponse = await drive.files.get({
+                    fileId: fileId,
+                    fields: 'name',
+                });
+                const fileName = metadataResponse.data.name || 'document.pdf';
+
+                // Fetch file content
                 const driveResponse = await drive.files.get({
-                    fileId: fileId, // Use the file_id from the database
-                    alt: 'media',    // Fetch media stream
-                }, { responseType: 'arraybuffer' });  // Use arraybuffer to get the binary data
+                    fileId: fileId,
+                    alt: 'media',
+                }, { responseType: 'arraybuffer' });
 
-                console.log("File data received:", driveResponse.data); // Debugging log
-
-                // Set appropriate headers for PDF
+                // Set headers for PDF response
                 res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `inline; filename="document.pdf"`);  // You can replace the filename with actual file name from Google Drive if needed
-                
-                // Send the file data as a buffer
+                res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+
+                // Send the file data
                 res.send(driveResponse.data);
             } catch (err) {
                 console.error('Error retrieving the file from Google Drive:', err.message);
@@ -98,7 +102,7 @@ router.get('/pdf/:research_id', async (req, res) => {
             res.status(404).send('Research not found');
         }
     } catch (err) {
-        console.error("Error retrieving file:", err.message); // Log the error message
+        console.error("Error retrieving file:", err.message);
         res.status(500).send('Internal Server Error');
     }
 });
