@@ -76,22 +76,24 @@ router.get('/pdf/:research_id', async (req, res) => {
             }
 
             // Fetch the file directly from Google Drive using the file_id
-            drive.files.get({
-                fileId: fileId, // Use the file_id from the database
-                alt: 'media',    // Fetch media stream
-            }, { responseType: 'arraybuffer' })  // Use arraybuffer to get the binary data
-            .then(driveResponse => {
+            try {
+                const driveResponse = await drive.files.get({
+                    fileId: fileId, // Use the file_id from the database
+                    alt: 'media',    // Fetch media stream
+                }, { responseType: 'arraybuffer' });  // Use arraybuffer to get the binary data
+
+                console.log("File data received:", driveResponse.data); // Debugging log
+
                 // Set appropriate headers for PDF
                 res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `inline; filename`);  // You can replace the filename with actual file name from Google Drive if needed
+                res.setHeader('Content-Disposition', `inline; filename="document.pdf"`);  // You can replace the filename with actual file name from Google Drive if needed
                 
                 // Send the file data as a buffer
                 res.send(driveResponse.data);
-            })
-            .catch(err => {
-                console.error('Error retrieving the file from Google Drive:', err);
-                res.status(500).send('Error retrieving the file from Google Drive');
-            });
+            } catch (err) {
+                console.error('Error retrieving the file from Google Drive:', err.message);
+                return res.status(500).send('Error retrieving the file from Google Drive');
+            }
 
         } else {
             res.status(404).send('Research not found');
