@@ -9,16 +9,17 @@ const router = express.Router();
 require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
-const KEYFILEPATH = path.resolve(__dirname, './uploads/documents');
-console.log("Key file path:", KEYFILEPATH);
-
+// Google Drive Setup
+const KEYFILEPATH = path.resolve(__dirname, "../service-account.json"); // Adjusted path for JSON file
 process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
+
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
   scopes: SCOPES,
 });
 const drive = google.drive({ version: "v3", auth });
+
 
 // Configure Multer for File Uploads
 const upload = multer({
@@ -46,13 +47,17 @@ const upload = multer({
 // Sanitize Table Name Helper
 const sanitizeTableName = (table) => {
   const validTables = ["authors", "category", "keywords"];
-  if (!validTables.includes(table)) throw new Error("Invalid table name");
+  if (!validTables.includes(table)) {
+    console.error(`Invalid table name: ${table}`);
+    throw new Error("Invalid table name");
+  }
   return table;
 };
 
 // File Upload Route
 router.post("/upload", upload.single("file"), async (req, res) => {
   const filePath = req.file ? path.resolve(__dirname, `./uploads/${req.file.filename}`) : null;
+
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
@@ -63,7 +68,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     if (!uploader_id || isNaN(uploader_id)) throw new Error("Invalid uploader ID!");
 
-    // Validate and check role
+    // Validate uploader role
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
     if (uploader.length === 0) throw new Error("Uploader not found!");
     const role_id = uploader[0].role_id;
@@ -74,6 +79,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (existingDocument.length > 0) throw new Error("Document with this title already exists!");
 
     // Upload to Google Drive
+    if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
+      throw new Error("Invalid file path: File does not exist or is a directory");
+    }
+
     const fileMetadata = {
       name: fileName,
       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc'],
@@ -82,6 +91,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       mimeType: "application/pdf",
       body: fs.createReadStream(filePath),
     };
+
     const driveResponse = await drive.files.create({
       resource: fileMetadata,
       media: media,
@@ -90,7 +100,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const driveFileId = driveResponse.data.id;
 
-    // Insert Metadata to Database
+    // Insert Metadata into Database
     const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, drive_file_id, status) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
       [title, abstract, fileName, uploader_id, driveFileId, status]
