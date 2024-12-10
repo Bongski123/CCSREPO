@@ -59,46 +59,31 @@ const drive = google.drive({
     auth,
 });
 
-const folderId = "1z4LekckQJPlZbgduf5FjDQob3zmtAElc"; // Google Drive folder ID
-
 // API to fetch PDF file by research ID
 router.get('/pdf/:research_id', async (req, res) => {
     const researchID = req.params.research_id;
 
     try {
-        // Retrieve file ID from the database based on research ID
-        const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
+        // Retrieve the file_id from the database based on research ID
+        const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
 
         if (result.length > 0) {
-            const fileId = result[0].filename; // Assuming 'filename' holds the Google Drive file ID
+            const fileId = result[0].file_id; // Get file_id from the database
             console.log('Retrieved fileId from database:', fileId); // Debugging log
 
             if (!fileId) {
                 return res.status(404).send('File ID is missing in the database');
             }
 
-            // List files in the Google Drive folder to verify the file exists
-            const fileListResponse = await drive.files.list({
-                q: `'${folderId}' in parents and name = '${fileId}'`,
-                fields: 'files(id, name)',
-            });
-
-            if (fileListResponse.data.files.length === 0) {
-                return res.status(404).send('File not found in the specified folder');
-            }
-
-            const file = fileListResponse.data.files[0];
-            console.log('File found in folder:', file);
-
-            // Directly fetch file content and send it as a response
+            // Fetch the file directly from Google Drive using the file_id
             drive.files.get({
-                fileId: file.id, // Correct field name
-                alt: 'media', // Media stream
-            }, { responseType: 'arraybuffer' })  // Use arraybuffer for file data
+                fileId: fileId, // Use the file_id from the database
+                alt: 'media',    // Fetch media stream
+            }, { responseType: 'arraybuffer' })  // Use arraybuffer to get the binary data
             .then(driveResponse => {
                 // Set appropriate headers for PDF
                 res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
+                res.setHeader('Content-Disposition', `inline; filename`);  // You can replace the filename with actual file name from Google Drive if needed
                 
                 // Send the file data as a buffer
                 res.send(driveResponse.data);
