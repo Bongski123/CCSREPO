@@ -6,17 +6,20 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 const router = express.Router();
+const apikeys = require ('')
 require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
 // Google Drive Setup
-const KEYFILEPATH = path.resolve(__dirname, "../service-account.json"); // Adjusted path for JSON file
+const KEYFILEPATH = path.resolve(__dirname, '../service-account.json' ); // Adjusted path for JSON file
 process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILEPATH,
-  scopes: SCOPES,
+  keyFile: apikeys,
+  apikeys: SCOPES,
+
+  
 });
 const drive = google.drive({ version: "v3", auth });
 
