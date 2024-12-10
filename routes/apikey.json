@@ -1,0 +1,14 @@
+{
+    "type": "service_account",
+    "project_id": "ccsrepository-444308",
+    "private_key_id": "8516bfea970fc75e8ae9fdbbf3cd72e8e33b2697",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtkS+IS9La3Lus\nFmCgLC12/X1sKsqa92H+KXBo4g2soIkYG71shsPXGIhYlH0Oj94iwoIapsa8KnIf\n5ZVvHdpRvsoKw4qbWNjp7vD6Y/izYB/wG4CuzLV0bCmhxui6xPgRyNgCGJzamY7C\nXPM4SnAKzle1iu+9tXg+lkXEb0ByutU1YhxE5QRjWCQAwIRj06ai664bcxXTdX6o\nIddRb8K7C5OSo+uLir+cfkPdm6bSYP/LUqVJlvDQErlGoxfHPYos/v8EqaYJsRSQ\nwQQKtvF0Qf2VpyUVTe16wSQHCJl3OnaoaNXBm1pQkP8twyrK1CXRhstS4mEr35FZ\nPB//ebVvAgMBAAECggEAChCv0XcYMLH5PicEDnXRYyObGOE4Y5kx+RO9HY/yXA7p\nNFkzeG4uQDR/f6eIwwXry1c9RT9jqfjKKnhdXJa+GNx4CfzB9nVGCvbcyaBvhTNv\nVrS5lylu4mP9XBDVYTNX8WwUvrZfrjuWcEYEosCKU84YfwIiGf3CjdqYDCapdZ2w\naenI5hTvx+b9qxv/0var0za90OQAYkRGHFORVARytAj3FpYUMwmrnwXmM9+FflY/\ns37g/HiYVXTA+UP/KrOdMCWnLuZqIy1zp/JE/S9tOwydr2a2UZNAC8RY8YnJh9DZ\nDg73ruQW8dVIAzq6q+L+i5xY0A64ATr7wUnVPrfRFQKBgQDuioucWGt2LCYiVq2N\nbytArpLjx22YHNFyKmDINTNbOtud9HzqsEwMksNuTI6sBhUfegG3KuqNquEjsfIn\n8gm0zM2M674r2/V9oqgGQ9CLPZQu4geISS2TShTXLrLAY7n48OedQDRirOtNLE4c\nvV8LmxiKICD9sjujBLUei2evEwKBgQC6RT8N7ToUEeS9hf3it3ZDaCIo5GKhfzoZ\nuHrK5yv0JgyFH7ULoEfIPkTWuh/760P1fFp/FnM2UGYhJgV6RuuQamiohTGYldS5\n1EUu/HTe0o8tPVjWInoIjJej6jzJGuLPoeF+tCOnDHooY69T3Onoj8G35GoE30DH\nWCiqlv3/tQKBgDlO/cWdFIw6hRrg2idNmwWaK14f7nuKCOO1vLS8207CsDqdn1k+\n67ZlmCAqsmgvuelrBXh9DgblE9vgh34DT0OppISDqpec67i4WEfRCQw6yhwNX6Pl\neNaXCLS92mIQU4C0V+DWqP8/7fQHfei3slr2cwnUODjbFirPGbhx44ITAoGAWbEg\nRI93SNS45P2RG8sleh25XSFj0MnXay0mi282/fAYVT3ISpnaFrTNJuwmnIJTjfBc\nDxf7UCr0kn+hYZimszpZvNOt5wA2l2h8C7zqdaTD5o/EqA+f3V/9YKNYs6lrj3ku\ngHkzNavPYoVllicoxp/6Mpcc6c2qfpKXulTMZ4UCgYEAxceAviZ687vohk39m7Op\nb+2ADcdZsBCUBtMQG1SqTCtY15tX1UX8tj9gim9DKfmUl0Mq4trgjgWBdWc8VEb9\nit+4qcbEQ8hLcqVBy+l94O07k96pAx21PYNvAZ/JV3HD6mszwsz5+/mHy+7sn2Cm\nRTit8UH/MITutg36zhmWGBE=\n-----END PRIVATE KEY-----\n",
+    "client_email": "ccsrepo@ccsrepository-444308.iam.gserviceaccount.com",
+    "client_id": "103197742225204345135",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ccsrepo%40ccsrepository-444308.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
+  

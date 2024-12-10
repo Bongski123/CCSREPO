@@ -6,138 +6,130 @@ const {
   isNCFUser,
   isNotNCFUser,
 } = require("../authentication/middleware");
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const { google } = require("googleapis");
 const router = express.Router();
 
-// Directory where files will be uploaded
-const uploadDir = path.resolve(__dirname, './uploads/documents');
+// Google Drive configuration
+const KEYFILEPATH = path.resolve(__dirname, "../config/service-account.json"); // Replace with your service account key file path
+const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+const auth = new google.auth.GoogleAuth({
+  keyFile: KEYFILEPATH,
+  scopes: SCOPES,
+});
+const drive = google.drive({ version: "v3", auth });
 
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for file uploads with file filter
-const storage = multer.diskStorage({
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+      const uploadDir = path.resolve(__dirname, "./uploads");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
+      cb(null, `${Date.now()}-${file.originalname}`);
     },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type, only PDFs are allowed!"), false);
+    }
+  },
 });
 
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-        cb(null, true);
-    } else {
-        cb(new Error('Invalid file type, only PDFs are allowed!'), false);
+router.post("/upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
     }
-};
 
-const upload = multer({ storage, fileFilter });
+    const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
+    const filePath = path.resolve(__dirname, `./uploads/${req.file.filename}`);
+    const fileName = req.file.filename;
 
-router.post('/upload', upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Invalid file type, only PDFs are allowed!' });
-        }
+    // Validate uploader_id
+    if (!uploader_id || isNaN(uploader_id)) {
+      return res.status(400).json({ error: "Invalid uploader ID!" });
+    }
 
-        const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
-        const filename = req.file.filename;
+    // Check the role of the uploader
+    const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
+    if (uploader.length === 0) {
+      return res.status(404).json({ error: "Uploader not found!" });
+    }
 
-        // Validate uploader_id (you may want to add more validation)
-        if (!uploader_id || isNaN(uploader_id)) {
-            return res.status(400).json({ error: 'Invalid uploader ID!' });
-        }
+    const role_id = uploader[0].role_id;
+    let status = role_id === 1 ? "approved" : "pending";
 
-        // Check the roleId of the uploader
-        const [uploader] = await db.query('SELECT role_id FROM users WHERE user_id = ?', [uploader_id]);
-        if (uploader.length === 0) {
-            return res.status(404).json({ error: 'Uploader not found!' });
-        }
+    // Check if title already exists
+    const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
+    if (existingDocument.length > 0) {
+      return res.status(409).json({ error: "Document with this title already exists!" });
+    }
 
-        const role_id = uploader[0].role_id;
-        console.log('Uploader roleId:', role_id); // Debugging step to log the roleId
+    // Upload the file to Google Drive
+    const fileMetadata = {
+      name: fileName,
+      parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with the folder ID from your Google Drive
+    };
+    const media = {
+      mimeType: "application/pdf",
+      body: fs.createReadStream(filePath),
+    };
 
-        // Set the default status
-        let status = 'pending';
-        if (role_id === 1) {
-            console.log('Uploader is Admin, setting status to approved'); // Debugging step
-            status = 'approved';
+    const driveResponse = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id, name",
+    });
+
+    const driveFileId = driveResponse.data.id;
+
+    console.log(`File uploaded to Google Drive: ${driveFileId}`);
+
+    // Insert research metadata into the database
+    const [result] = await db.query(
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, drive_file_id, status) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+      [title, abstract, fileName, uploader_id, driveFileId, status]
+    );
+
+    const researchId = result.insertId;
+
+    // Insert authors, categories, and keywords
+    const insertEntities = async (researchId, entities, table, columnName) => {
+      const names = entities.split(",").map(name => name.trim());
+      for (const name of names) {
+        let [entity] = await db.query(`SELECT ${columnName} FROM ${table} WHERE ${table.slice(0, -1)}_name = ?`, [name]);
+        if (entity.length === 0) {
+          const [result] = await db.query(`INSERT INTO ${table} (${table.slice(0, -1)}_name) VALUES (?)`, [name]);
+          entity = { [columnName]: result.insertId };
         } else {
-            console.log('Uploader is not Admin, setting status to pending'); // Debugging step
+          entity = entity[0];
         }
+        const joinTable = `research_${table}`;
+        await db.query(`INSERT INTO ${joinTable} (research_id, ${columnName}) VALUES (?, ?)`, [researchId, entity[columnName]]);
+      }
+    };
 
-        // Check if title already exists
-        const [existingDocument] = await db.query('SELECT title FROM researches WHERE title = ?', [title]);
-        if (existingDocument.length > 0) {
-            return res.status(409).json({ error: 'Document with this title already exists!' });
-        }
+    await insertEntities(researchId, authors, "authors", "author_id");
+    await insertEntities(researchId, categories, "category", "category_id");
+    await insertEntities(researchId, keywords, "keywords", "keyword_id");
 
-        // Insert research with dynamic status
-        const [result] = await db.query('INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status) VALUES (?, NOW(), ?, ?, ?, ?)', [title, abstract, filename, uploader_id, status]);
-        const researchId = result.insertId;
-        console.log('Inserted Research ID:', researchId); // Debugging step
+    // Clean up: Delete local file
+    fs.unlinkSync(filePath);
 
-        // Insert authors
-        const insertAuthors = async (researchId, authors) => {
-            const authorNames = authors.split(',').map(name => name.trim());
-            for (const name of authorNames) {
-                let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
-                if (author.length === 0) {
-                    const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [name]);
-                    author = { author_id: result.insertId };
-                } else {
-                    author = author[0];
-                }
-                await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
-            }
-        };
-
-        await insertAuthors(researchId, authors);
-
-        // Insert categories
-        const insertCategories = async (researchId, categories) => {
-            const categoryNames = categories.split(',').map(name => name.trim());
-            for (const name of categoryNames) {
-                let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
-                if (category.length === 0) {
-                    const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
-                    category = { category_id: result.insertId };
-                } else {
-                    category = category[0];
-                }
-                await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
-            }
-        };
-
-        await insertCategories(researchId, categories);
-
-        // Insert keywords
-        const insertKeywords = async (researchId, keywords) => {
-            const keywordNames = keywords.split(',').map(name => name.trim());
-            for (const name of keywordNames) {
-                let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
-                if (keyword.length === 0) {
-                    const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
-                    keyword = { keyword_id: result.insertId };
-                } else {
-                    keyword = keyword[0];
-                }
-                await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
-            }
-        };
-
-        await insertKeywords(researchId, keywords);
-
-        res.status(201).json({ message: 'Document Uploaded Successfully' });
-    } catch (error) {
-        console.error('Error Upload Document:', error);
-        res.status(500).json({ error: 'Upload Document Endpoint Error!' });
-    }
+    res.status(201).json({ message: "Document Uploaded Successfully", driveFileId });
+  } catch (error) {
+    console.error("Error Upload Document:", error);
+    res.status(500).json({ error: "Failed to upload document!" });
+  }
 });
 
 module.exports = router;
