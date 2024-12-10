@@ -6,25 +6,21 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 const router = express.Router();
-const apikeys = require ('')
 require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
-// Google Drive Setup
-const KEYFILEPATH = path.resolve(__dirname, '../service-account.json' ); // Adjusted path for JSON file
+const KEYFILEPATH = path.resolve(__dirname, '../service-account.json'); // Path to Google Service Account Key
 process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 const auth = new google.auth.GoogleAuth({
-  keyFile: apikeys,
-  apikeys: SCOPES,
-
-  
+  keyFile: KEYFILEPATH,
+  scopes: SCOPES
 });
+
 const drive = google.drive({ version: "v3", auth });
 
-
-// Configure Multer for File Uploads
+// Multer Setup for File Uploads
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -62,39 +58,44 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   const filePath = req.file ? path.resolve(__dirname, `./uploads/${req.file.filename}`) : null;
 
   try {
+    // Check if file is uploaded
     if (!req.file) {
       return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
     }
 
+    // Extract form data
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
     const fileName = req.file.filename;
 
+    // Validate uploader ID
     if (!uploader_id || isNaN(uploader_id)) throw new Error("Invalid uploader ID!");
 
-    // Validate uploader role
+    // Fetch uploader info and validate role
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
     if (uploader.length === 0) throw new Error("Uploader not found!");
     const role_id = uploader[0].role_id;
     const status = role_id === 1 ? "approved" : "pending";
 
-    // Check for duplicate title
+    // Check for duplicate title in database
     const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
     if (existingDocument.length > 0) throw new Error("Document with this title already exists!");
 
-    // Upload to Google Drive
+    // Ensure file exists before uploading to Google Drive
     if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
       throw new Error("Invalid file path: File does not exist or is a directory");
     }
 
+    // Google Drive upload metadata
     const fileMetadata = {
       name: fileName,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc'],
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc'], // Default folder if not set in .env
     };
     const media = {
       mimeType: "application/pdf",
       body: fs.createReadStream(filePath),
     };
 
+    // Upload file to Google Drive
     const driveResponse = await drive.files.create({
       resource: fileMetadata,
       media: media,
@@ -103,15 +104,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const driveFileId = driveResponse.data.id;
 
-    // Insert Metadata into Database
+    // Insert research metadata into database
     const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, drive_file_id, status) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
       [title, abstract, fileName, uploader_id, driveFileId, status]
     );
-
     const researchId = result.insertId;
 
-    // Insert Authors, Categories, and Keywords
+    // Insert authors, categories, and keywords into respective tables
     const insertEntities = async (entities, table, columnName) => {
       const sanitizedTable = sanitizeTableName(table);
       const names = entities.split(",").map((name) => name.trim());
@@ -128,18 +128,20 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
+    // Insert entities for authors, categories, and keywords
     await insertEntities(authors, "authors", "author_id");
     await insertEntities(categories, "category", "category_id");
     await insertEntities(keywords, "keywords", "keyword_id");
 
-    // Clean up local file
+    // Clean up the local uploaded file after successful upload
     fs.unlinkSync(filePath);
 
+    // Respond with success message and Drive file ID
     res.status(201).json({ message: "Document Uploaded Successfully", driveFileId });
   } catch (error) {
     console.error("Error Uploading Document:", error);
     if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // Cleanup local file
+      fs.unlinkSync(filePath); // Clean up the file in case of error
     }
     res.status(500).json({ error: error.message || "Failed to upload document!" });
   }
