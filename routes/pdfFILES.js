@@ -1,10 +1,14 @@
 const express = require('express');
-const { google } = require('googleapis');
+const fs = require('fs');
+const path = require('path');
 const db = require('../database/db'); // Adjust the path as necessary
+const { google } = require('googleapis');
 
 const router = express.Router();
 
-// Google Service Account credentials for Drive API
+
+
+
 const googleServiceAccount = {
     type: "service_account",
     project_id: "ccsrepository-444308",
@@ -18,9 +22,24 @@ const googleServiceAccount = {
   ewqa1GM9aouAI0d+RsCw//UEG2V4v+kxkso21dB9YmmKbSnyRairNr2IIeyNrPWL
   NZShI6UHAgMBAAECggEAEXK2CY2ujYiS5yvV7fn3ogIS/q2/hC/Zzx73ahaTXWdv
   tfNwK9T1UL8fbRyHgr3aaBnn6KBAOdP7TuxRksQYinHrMBdH3ZIaA8UaQalnwC9e
-  uZN0wjIQAhC6rwCFuV0pzk90woiO2AcqB4ghsMmxlXulLJryZi0073ppXu4jwKg+ 
-  ... (private key continues)
-  -----END PRIVATE KEY-----`,
+  uZN0wjIQAhC6rwCFuV0pzk90woiO2AcqB4ghsMmxlXulLJryZi0073ppXu4jwKg+
+  H9vdUlzNYUUHJVvHWIiv+ITN43Xx0EYRIe6n5e/ZeZ4hAFqtmqzb+rSOXgmgqIMw
+  oGBW/OZbvlkJsGWHyGZeZSLL+iJXNDJDk8YFv3arpbInBk3OYQk9UPYY82l3f1au
+  DlWtL389kSgyJ/Gfvr30qDhs1WEN5Te2//HZu5l7YQKBgQDrH5WbxHJzk/Hc1jpK
+  JQmUlB2t26Cv+/+fOzAz5KHgFX2RLjXIHl5iufib3HM+nbUOe66As7U0r7/Va0Nn
+  1qppy05HL4ZzA36bsQ8Fw5prdVQjjU+r4c1wEaY8O13ckzL6qKZIOGNEuBF0vRoq
+  zGxN8iYsZ3MW6JX7E3zK/FvpYQKBgQDodXl5CJMw/67n6o/DlmnoxMdUNKXvyoxs
+  Udz/daKX682tGBLa06u1ZCCMCJYgahQwqRv15apTscOvy5sBQraz8H/UGc3v0AZ0
+  Dz5zyOaLw9pHv9C7MuDRhzd708Q3Z/Gh4YK6+syae6gposLh1wLqIbRUOTuCZGA6
+  RSFZ4qYfZwKBgQCczEZgR6Sv0RS1WiQrOAHolNIqFFJXqi0xSi5+HNWa85n2jKOP
+  HjmBi1Xw0xYDxvZsfyzDZZTNWvsKX2rnP7ALt2ovbNEzuDvhpjVHecdsLCV9RArC
+  rGXte8epWUniBEQ2BuxFM114AWyatlVR/1umq3qrmB2XRGposvlBAQRmYQKBgQCS
+  lwIzQSURESvLNC/Ut1WyY+UPROQfgytqY3Vp41TVWO4q6bN6K2Fs0ed0ZzXE2yBA
+  T2RCfMIcZU1x3oOxF9D/R/pUVrF3OUfYiIRpn5dDLA7KkDug0UTU3OAwRirGhdXq
+  r7sxDldYVAKHvwwGPwCnhPmi4zST1ZiZJl8Rv8vioQKBgQDOiy1z7ezJzgJSNoKz
+  ee5zOWdsSRkxHBKRtc1vbBIxEg+z+838+TxXf2EJhkOA11OQptLGZ41iziR41P6A
+  qZRp3lzXySc6REVOJI969AZSGovOFYPX6YguCb6X4wSuc/Avn+3AT/0bE6eMTAhX
+  FgTYhJbE4mHJCmVUxn1C+iUleg==\n-----END PRIVATE KEY-----`,
     client_email: "ccsrepo@ccsrepository-444308.iam.gserviceaccount.com",
     client_id: "103197742225204345135",
     auth_uri: "https://accounts.google.com/o/oauth2/auth",
@@ -28,14 +47,14 @@ const googleServiceAccount = {
     auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
     client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ccsrepo%40ccsrepository-444308.iam.gserviceaccount.com",
     universe_domain: "googleapis.com",
-};
-
+  };
 // Google Drive API setup using service account
+
 const auth = new google.auth.GoogleAuth({
     credentials: googleServiceAccount, // Using credentials object directly
     scopes: ["https://www.googleapis.com/auth/drive"],
-});
-
+  });
+  
 const drive = google.drive({
     version: "v3",
     auth,
@@ -50,39 +69,41 @@ router.get('/pdf/:research_id', async (req, res) => {
 
     try {
         // Retrieve file ID from the database based on research ID
-        const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
+        const [result] = await db.query('SELECT filename FROM researches WHERE research_id = ?', [researchID]);
 
-        if (result.length === 0) {
-            return res.status(404).send('Research not found');
+        if (result.length > 0) {
+            const fileId = result[0].file_id; // Assuming 'filename' holds the Google Drive file ID
+            console.log('Retrieved fileId from database:', fileId); // Debugging log
+
+            if (!fileId) {
+                return res.status(404).send('File ID is missing in the database');
+            }
+
+            // List files in the Google Drive folder to verify the file exists
+            const fileListResponse = await drive.files.list({
+                q: `'${folderId}' in parents and name = '${fileId}'`,
+                fields: 'files(file_id, name)',
+            });
+
+            if (fileListResponse.data.files.length === 0) {
+                return res.status(404).send('File not found in the specified folder');
+            }
+
+            const file = fileListResponse.data.files[0];
+            console.log('File found in folder:', file);
+
+            // Download the file from Google Drive
+            const driveResponse = await drive.files.get({
+                fileId: file.file_id,
+                alt: 'media',
+            });
+
+            // Set appropriate content type for the PDF
+            res.setHeader('Content-Type', 'application/pdf');
+            res.send(driveResponse.data);
+        } else {
+            res.status(404).send('Research not found');
         }
-
-        const fileId = result[0].file_id; // Using 'file_id' directly from the database
-
-        if (!fileId) {
-            return res.status(404).send('File ID is missing in the database');
-        }
-
-        // List files in the Google Drive folder to verify the file exists
-        const fileListResponse = await drive.files.list({
-            q: `'${folderId}' in parents and name = '${fileId}'`,
-            fields: 'files(id, name)',
-        });
-
-        if (fileListResponse.data.files.length === 0) {
-            return res.status(404).send('File not found in the specified folder');
-        }
-
-        const file_id = fileListResponse.data.files[0];
-
-        // Download the file from Google Drive
-        const driveResponse = await drive.files.get({
-            fileId: file_id,
-            alt: 'media',
-        });
-
-        // Set appropriate content type for the PDF
-        res.setHeader('Content-Type', 'application/pdf');
-        res.send(driveResponse.data);
     } catch (err) {
         console.error('Error retrieving file:', err);
         res.status(500).send('Internal Server Error');

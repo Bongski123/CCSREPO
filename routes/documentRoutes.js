@@ -102,12 +102,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       const driveResponse = await drive.files.create({
         resource: fileMetadata,
         media,
-        fields: "id",
+        fields: "file_id",
       });
 
       console.log("Google Drive response:", driveResponse.data);
 
-      const fileId = driveResponse.data.id;
+      const fileId = driveResponse.data.file_id;
 
       // Validate uploader_id
       const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
