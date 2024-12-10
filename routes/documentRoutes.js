@@ -74,7 +74,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Upload to Google Drive
     const fileMetadata = {
       name: fileName,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || '1z4LekckQJPlZbgduf5FjDQob3zmtAElc'],
     };
     const media = {
       mimeType: "application/pdf",
