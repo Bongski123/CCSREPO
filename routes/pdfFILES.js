@@ -95,21 +95,23 @@ console.log('File found in folder:', file);
 
 // Download the file from Google Drive
 const driveResponse = await drive.files.get({
-    fileId: file.id,  // Use 'id' here
+    fileId: file.id, // Correct field name
     alt: 'media',
 });
 
 // Set appropriate content type for the PDF
 res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
 res.send(driveResponse.data);
+
 
         } else {
             res.status(404).send('Research not found');
         }
-    } catch (err) {
-        console.error('Error retrieving file:', err);
-        res.status(500).send('Internal Server Error');
-    }
+  } catch (err) {
+    console.error("Error retrieving file:", err.message); // Log the error message
+    res.status(500).send('Internal Server Error');
+}
 });
 
 module.exports = router;
