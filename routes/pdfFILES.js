@@ -80,38 +80,39 @@ router.get('/pdf/:research_id', async (req, res) => {
             }
 
             // List files in the Google Drive folder to verify the file exists
-          // List files in the Google Drive folder to verify the file exists
-const fileListResponse = await drive.files.list({
-    q: `'${folderId}' in parents and name = '${fileId}'`,
-    fields: 'files(id, name)', // Use 'id' instead of 'fileId'
-});
+            const fileListResponse = await drive.files.list({
+                q: `'${folderId}' in parents and name = '${fileId}'`,
+                fields: 'files(id, name)', // Use 'id' instead of 'fileId'
+            });
 
-if (fileListResponse.data.files.length === 0) {
-    return res.status(404).send('File not found in the specified folder');
-}
+            if (fileListResponse.data.files.length === 0) {
+                return res.status(404).send('File not found in the specified folder');
+            }
 
-const file = fileListResponse.data.files[0];
-console.log('File found in folder:', file);
+            const file = fileListResponse.data.files[0];
+            console.log('File found in folder:', file);
 
-// Download the file from Google Drive
-const driveResponse = await drive.files.get({
-    fileId: file.id, // Correct field name
-    alt: 'media',
-});
+            // Download the file from Google Drive
+            const driveResponse = await drive.files.get({
+                fileId: file.id, // Correct field name
+                alt: 'media',
+            });
 
-// Set appropriate content type for the PDF
-res.setHeader('Content-Type', 'application/pdf');
-res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
-res.send(driveResponse.data);
+            // Set the appropriate headers to display PDF inline
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'inline; filename="' + file.name + '"');
 
-
+            // Send the PDF content to the browser
+            res.send(driveResponse.data);
         } else {
             res.status(404).send('Research not found');
         }
-  } catch (err) {
-    console.error("Error retrieving file:", err.message); // Log the error message
-    res.status(500).send('Internal Server Error');
-}
+    } catch (err) {
+        console.error("Error retrieving file:", err.message); // Log the error message
+        res.status(500).send('Internal Server Error');
+    }
 });
+
+
 
 module.exports = router;
