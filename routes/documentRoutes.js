@@ -10,7 +10,8 @@ require("dotenv").config(); // Load environment variables
 
 // Google Drive Setup
 const KEYFILEPATH = path.resolve(__dirname, '../service-account.json'); // Path to Google Service Account Key
-process.env.GOOGLE_APPLICATION_CREDENTIALS = KEYFILEPATH;
+process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(__dirname, '../service-account.json');
+
 
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const auth = new google.auth.GoogleAuth({
