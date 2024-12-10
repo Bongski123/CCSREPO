@@ -80,10 +80,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Upload file to Google Drive
     const fileMetadata = {
-      name: `${Date.now()}-${req.file.originalname}`,
+      name: req.file.originalname, // Use the original file name
       parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
     };
-
     const media = {
       mimeType: req.file.mimetype,
       body: bufferToStream(req.file.buffer),
@@ -121,9 +120,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Insert research with the file ID from Google Drive
     const [result] = await db.query(
-      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", // Added file_id here
-      [title, abstract, fileId, uploader_id, status, fileId]  // Added fileId as the 7th value for the file_id column
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
+    
     const researchId = result.insertId;
     const insertAuthors = async (researchId, authors) => {
       const authorNames = authors.split(',').map(name => name.trim());
