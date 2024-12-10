@@ -72,11 +72,11 @@ router.get('/pdf/:research_id', async (req, res) => {
             return res.status(404).send('File not found in the specified folder');
         }
 
-        const file = fileListResponse.data.files[0];
+        const file_id = fileListResponse.data.files[0];
 
         // Download the file from Google Drive
         const driveResponse = await drive.files.get({
-            fileId: file.id,
+            fileId: file_id,
             alt: 'media',
         });
 
