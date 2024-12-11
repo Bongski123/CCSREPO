@@ -1,23 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer'); // For sending emails
-const cors = require('cors');
 const dotenv = require('dotenv');
 const db = require('../database/db'); // Import your database connection
 
+dotenv.config(); // Load environment variables from .env file
 
-dotenv.config();
-
-
+// Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // You can use another email provider
+  secure: true,
+  host: 'smtp.gmail.com',  // Set the SMTP host explicitly for Gmail
+  port: 465,
   auth: {
-    user: 'ncfresearchnexus@gmail.com', // Replace with your email
-    pass: 'iirehsogzzsadbwk',  // Replace with your email password or app password
+    user: process.env.EMAIL_USER,  // Your Gmail email address from .env file
+    pass: process.env.EMAIL_PASS,  // Your Gmail app password or password from .env file
   },
 });
 
-// Define the route for handling PDF requests
 // Define the route for handling PDF requests
 router.post('/request-pdf', (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
@@ -45,7 +44,7 @@ router.post('/request-pdf', (req, res) => {
 
     // Construct the email message
     const mailOptions = {
-      from: 'ncfresearchnexus@gmail.com', // The sender's email address
+      from: process.env.EMAIL_USER, // The sender's email address from .env
       to: authorEmails.join(','), // Send the email to all authors
       subject: `Request for PDF: ${researchTitle}`,
       text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
