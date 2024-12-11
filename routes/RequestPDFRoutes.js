@@ -1,4 +1,3 @@
-// requestPdfRoutes.js
 const express = require('express');
 const db = require('../database/db');
 const sendEmailNotification = require('../controllers/EmailService'); // Import the email service
@@ -14,6 +13,7 @@ router.post('/request-pdf', (req, res) => {
     [researchId],
     (err, results) => {
       if (err) {
+        console.error('Error fetching research details:', err);
         return res.status(500).json({ error: 'Error fetching research details' });
       }
 
@@ -29,6 +29,7 @@ router.post('/request-pdf', (req, res) => {
         [researchTitle, requesterName, requesterEmail, purpose],
         (err, result) => {
           if (err) {
+            console.error('Error inserting request into database:', err);
             return res.status(500).json({ error: 'Error inserting request into database' });
           }
 
@@ -40,6 +41,7 @@ router.post('/request-pdf', (req, res) => {
             [researchId],
             (err, authorResults) => {
               if (err) {
+                console.error('Error fetching authors:', err);
                 return res.status(500).json({ error: 'Error fetching authors' });
               }
 
@@ -55,7 +57,9 @@ router.post('/request-pdf', (req, res) => {
                   requesterName,
                   requesterEmail,
                   purpose
-                );
+                ).catch(err => {
+                  console.error(`Error sending email to ${author.email}:`, err);
+                });
               });
 
               // Step 5: Send success response
