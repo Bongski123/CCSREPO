@@ -32,8 +32,8 @@ router.post('/request-pdf', async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.SMTP_USER, // Ensure SMTP_USER is set in the environment variables
-        pass: process.env.SMTP_PASS, // Ensure SMTP_PASS is set in the environment variables
+        user: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Ensure SMTP_USER is set in the environment variables
+        pass: process.env.SMTP_PASS || 'frdjxzlyivcdoqha', // Ensure SMTP_PASS is set in the environment variables
       },
     });
 
