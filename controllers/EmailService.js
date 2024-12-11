@@ -1,14 +1,16 @@
 const nodemailer = require('nodemailer');
 const db = require('../database/db'); // Import your database connection
-require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config();
 // Set up email transport using Nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER, // Gmail email
-    pass: process.env.SMTP_PASS, // App Password generated from Google Account
+    user: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Ensure SMTP_USER is set in the environment variables
+    pass: process.env.SMTP_PASS || 'frdjxzlyivcdoqha', // Ensure SMTP_PASS is set in the environment variables
   },
 });
+
 
 // Function to fetch authors' emails for a given research_id
 const getAuthorsEmails = (researchId) => {
@@ -43,7 +45,7 @@ const sendEmailNotification = async (researchId, researchTitle, requesterName, r
     // Step 2: Loop through authors' emails and send emails
     authorEmails.forEach((authorEmail) => {
       const mailOptions = {
-        from: process.env.EMAIL_USER, // Sender address
+        from: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Sender address
         to: authorEmail, // Recipient address
         subject: 'PDF Request for Your Research Document',
         text: `Hello,
