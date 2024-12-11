@@ -1,9 +1,9 @@
 const express = require('express');
-const db = require('../database/db');
-const router = express.Router();
+const db = require('../database/db'); // Assuming you have a db setup
 const nodemailer = require('nodemailer');
-// Middleware to validate privacy value
+const router = express.Router();
 
+// Middleware to validate privacy value
 const validatePrivacy = (req, res, next) => {
   const { privacy } = req.body;
   if (!['public', 'private'].includes(privacy)) {
@@ -39,11 +39,6 @@ router.put('/research/:researchId/privacy', validatePrivacy, async (req, res) =>
     res.status(500).json({ message: 'Internal server error.' });
   }
 });
-
-
-
-
-
 
 // Set up email transport using Nodemailer
 const transporter = nodemailer.createTransport({
@@ -82,68 +77,59 @@ Your Research System`,
 };
 
 // POST /request-pdf endpoint
-router.post('/request-pdf', (req, res) => {
+router.post('/request-pdf', async (req, res) => {
   const { researchId, requesterName, requesterEmail, purpose } = req.body;
 
   // Step 1: Fetch the research title based on researchId
-  db.query(
-    'SELECT title FROM researches WHERE research_id = ?',
-    [researchId],
-    (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Error fetching research details' });
-      }
+  try {
+    const [results] = await db.query('SELECT title FROM researches WHERE research_id = ?', [researchId]);
 
-      const researchTitle = results[0]?.title;
-
-      if (!researchTitle) {
-        return res.status(404).json({ error: 'Research not found' });
-      }
-
-      // Step 2: Insert the PDF request into the 'pdf_requests' table
-      db.query(
-        'INSERT INTO pdf_requests (research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?)',
-        [researchTitle, requesterName, requesterEmail, purpose],
-        (err, result) => {
-          if (err) {
-            return res.status(500).json({ error: 'Error inserting request into database' });
-          }
-
-          // Step 3: Fetch all authors for this research (excluding uploader)
-          db.query(
-            'SELECT a.email FROM authors a ' +
-            'JOIN research_authors ra ON a.author_id = ra.author_id ' +
-            'WHERE ra.research_id = ?',
-            [researchId],
-            (err, authorResults) => {
-              if (err) {
-                return res.status(500).json({ error: 'Error fetching authors' });
-              }
-
-              if (authorResults.length === 0) {
-                return res.status(404).json({ error: 'No authors found for this research' });
-              }
-
-              // Step 4: Send email to each author
-              authorResults.forEach(author => {
-                sendEmailNotification(
-                  author.email,
-                  researchTitle,
-                  requesterName,
-                  requesterEmail,
-                  purpose
-                );
-              });
-
-              // Step 5: Send success response
-              res.status(200).json({ message: 'Request sent successfully to authors!' });
-            }
-          );
-        }
-      );
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Research not found' });
     }
-  );
-});
 
+    const researchTitle = results[0].title;
+
+    // Step 2: Insert the PDF request into the 'pdf_requests' table
+    const [insertResult] = await db.query(
+      'INSERT INTO pdf_requests (research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?)',
+      [researchTitle, requesterName, requesterEmail, purpose]
+    );
+
+    if (!insertResult.affectedRows) {
+      return res.status(500).json({ error: 'Failed to insert request into the database' });
+    }
+
+    // Step 3: Fetch all authors for this research (excluding uploader)
+    const [authorResults] = await db.query(
+      'SELECT a.email FROM authors a ' +
+      'JOIN research_authors ra ON a.author_id = ra.author_id ' +
+      'WHERE ra.research_id = ?',
+      [researchId]
+    );
+
+    if (authorResults.length === 0) {
+      return res.status(404).json({ error: 'No authors found for this research' });
+    }
+
+    // Step 4: Send email to each author
+    authorResults.forEach(author => {
+      sendEmailNotification(
+        author.email,
+        researchTitle,
+        requesterName,
+        requesterEmail,
+        purpose
+      );
+    });
+
+    // Step 5: Send success response
+    res.status(200).json({ message: 'Request sent successfully to authors!' });
+
+  } catch (err) {
+    console.error('Error processing PDF request:', err);
+    res.status(500).json({ error: 'Error processing your request' });
+  }
+});
 
 module.exports = router;
