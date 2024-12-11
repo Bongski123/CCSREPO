@@ -42,54 +42,78 @@ router.put('/research/:researchId/privacy', validatePrivacy, async (req, res) =>
 
 
 
-// Configure nodemailer transporter
+
+
+// Set up email transport using Nodemailer
 const transporter = nodemailer.createTransport({
-  service: 'Gmail',
+  service: 'gmail', // Example: Gmail as the service provider
   auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-  }
+    user: process.env.EMAIL_USER, // Use your email environment variable
+    pass: process.env.EMAIL_PASS, // Use your email password or App Password
+  },
 });
 
-// Endpoint to handle the PDF request
+// Function to send email to the authors
+const sendEmailNotification = (authorEmail, researchTitle, requesterName, requesterEmail, purpose) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER, // Your email address
+    to: authorEmail, // Author's email
+    subject: `PDF Request for Your Research Document: ${researchTitle}`,
+    text: `Hello,\n\nYou have received a request for your research titled "${researchTitle}".\n\n` +
+          `Requester's Name: ${requesterName}\n` +
+          `Requester's Email: ${requesterEmail}\n` +
+          `Purpose of Request: ${purpose}\n\n` +
+          `Please respond to the request accordingly.\n\nBest regards,\nYour Research Management System`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.log('Error sending email:', err);
+    } else {
+      console.log('Email sent to author: ' + info.response);
+    }
+  });
+};
+
 router.post('/request-pdf', (req, res) => {
   const { researchId, requesterName, requesterEmail, purpose } = req.body;
 
-  // Fetch the title and uploader_id from the 'researches' table based on researchId
-  connection.query(
-    'SELECT uploader_id, title FROM researches WHERE research_id = ?',
+  // Fetch the title from the 'researches' table based on researchId
+  db.query(
+    'SELECT title FROM researches WHERE research_id = ?',
     [researchId],
     (err, results) => {
       if (err) {
         return res.status(500).send('Error fetching research details');
       }
 
-      const uploaderId = results[0]?.uploader_id;
       const researchTitle = results[0]?.title;
 
-      if (!uploaderId) {
+      if (!researchTitle) {
         return res.status(404).send('Research not found');
       }
 
       // Insert the PDF request into the 'pdf_requests' table
-      connection.query(
-        'INSERT INTO pdf_requests (research_title, requester_name, requester_email, purpose, uploader_id) VALUES (?, ?, ?, ?, ?)',
-        [researchTitle, requesterName, requesterEmail, purpose, uploaderId],
+      db.query(
+        'INSERT INTO pdf_requests (research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?)',
+        [researchTitle, requesterName, requesterEmail, purpose],
         (err, result) => {
           if (err) {
             return res.status(500).send('Error inserting request');
           }
 
-          // Fetch all authors for this research (including the uploader)
-          connection.query(
-            'SELECT a.email FROM authors a JOIN research_authors ra ON a.author_id = ra.author_id WHERE ra.research_id = ?',
+          // Fetch all authors for this research (excluding uploader)
+          db.query(
+            'SELECT a.email FROM authors a ' +
+            'JOIN research_authors ra ON a.author_id = ra.author_id ' +
+            'WHERE ra.research_id = ?',
             [researchId],
             (err, authorResults) => {
               if (err) {
                 return res.status(500).send('Error fetching authors');
               }
 
-              // Loop through the authors and send an email to each
+              // Send email to each author
               authorResults.forEach(author => {
                 sendEmailNotification(author.email, researchTitle, requesterName, requesterEmail, purpose);
               });
@@ -103,24 +127,6 @@ router.post('/request-pdf', (req, res) => {
     }
   );
 });
-
-// Example function to send an email (using Nodemailer)
-const sendEmailNotification = (authorEmail, researchTitle, requesterName, requesterEmail, purpose) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: authorEmail,
-    subject: 'PDF Request for Your Research Document',
-    text: `Hello, You have received a request for your research titled "${researchTitle}" from ${requesterName} (${requesterEmail}).\n\nPurpose: ${requesterName} has requested the document for the purpose of: ${purpose}.\n\nPlease respond to the request accordingly.`
-  };
-
-  transporter.sendMail(mailOptions, (err, info) => {
-    if (err) {
-      console.log('Error sending email:', err);
-    } else {
-      console.log('Email sent to author: ' + info.response);
-    }
-  });
-};
 
 
 module.exports = router;
