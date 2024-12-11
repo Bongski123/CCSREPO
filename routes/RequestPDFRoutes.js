@@ -49,21 +49,27 @@ router.post('/request-pdf', (req, res) => {
                 return res.status(404).json({ error: 'No authors found for this research' });
               }
 
-              // Step 4: Send email to each author
-              authorResults.forEach(author => {
+              // Step 4: Send email to each author asynchronously
+              const emailPromises = authorResults.map((author) =>
                 sendEmailNotification(
                   author.email,
                   researchTitle,
                   requesterName,
                   requesterEmail,
                   purpose
-                ).catch(err => {
-                  console.error(`Error sending email to ${author.email}:`, err);
-                });
-              });
+                )
+              );
 
-              // Step 5: Send success response
-              res.status(200).json({ message: 'Request sent successfully to authors!' });
+              // Wait for all email notifications to be sent
+              Promise.all(emailPromises)
+                .then(() => {
+                  // Step 5: Send success response
+                  res.status(200).json({ message: 'Request sent successfully to authors!' });
+                })
+                .catch((err) => {
+                  console.error('Error sending email notifications:', err);
+                  res.status(500).json({ error: 'Error sending email notifications' });
+                });
             }
           );
         }
