@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer'); // For sending emails
 const db = require('../database/db'); // Import your database connectionre
 
 
+console.log(process.env.EMAIL_USER);
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
   secure: false,
