@@ -1,76 +1,86 @@
 const nodemailer = require('nodemailer');
-const db = require('../database/db'); // Import your database connection
-const dotenv = require('dotenv');
-dotenv.config();
+const db = require('../database/db'); // Import database connection
+require('dotenv').config(); // Load environment variables
+
 // Set up email transport using Nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Ensure SMTP_USER is set in the environment variables
-    pass: process.env.SMTP_PASS || 'frdjxzlyivcdoqha', // Ensure SMTP_PASS is set in the environment variables
+    user: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com',
+    pass: process.env.SMTP_PASS || 'iirehsogzzsadbwk', // Use app password if needed
   },
 });
 
-
-// Function to fetch authors' emails for a given research_id
-const getAuthorsEmails = (researchId) => {
+/**
+ * Fetches authors' emails for a given research ID from the database.
+ * @param {number} researchId - The ID of the research document.
+ * @returns {Promise<string[]>} - A promise resolving to an array of author email addresses.
+ */
+const getAuthorsEmails = async (researchId) => {
   return new Promise((resolve, reject) => {
-    db.query(
-      'SELECT a.email FROM authors a ' +
-      'JOIN research_authors ra ON a.author_id = ra.author_id ' +
-      'WHERE ra.research_id = ?',
-      [researchId],
-      (err, results) => {
-        if (err) {
-          reject('Error fetching authors emails: ' + err);
-        } else {
-          resolve(results.map(result => result.email));
-        }
+    const query = `
+      SELECT a.email 
+      FROM authors a
+      JOIN research_authors ra ON a.author_id = ra.author_id
+      WHERE ra.research_id = ?`;
+
+    db.query(query, [researchId], (err, results) => {
+      if (err) {
+        return reject(new Error(`Error fetching authors' emails: ${err.message}`));
       }
-    );
+      const emails = results.map(result => result.email);
+      resolve(emails);
+    });
   });
 };
 
-// Function to send email notification to all authors
+/**
+ * Sends email notifications to authors regarding a PDF request.
+ * @param {number} researchId - The ID of the research document.
+ * @param {string} researchTitle - The title of the research document.
+ * @param {string} requesterName - Name of the person requesting the PDF.
+ * @param {string} requesterEmail - Email of the person requesting the PDF.
+ * @param {string} purpose - Purpose of the request.
+ */
 const sendEmailNotification = async (researchId, researchTitle, requesterName, requesterEmail, purpose) => {
   try {
-    // Step 1: Get all authors' emails for the given researchId
+    // Step 1: Fetch all authors' emails for the research ID
     const authorEmails = await getAuthorsEmails(researchId);
 
-    if (authorEmails.length === 0) {
-      console.log('No authors found for this research');
+    if (!authorEmails.length) {
+      console.log('No authors found for this research.');
       return;
     }
 
-    // Step 2: Loop through authors' emails and send emails
-    authorEmails.forEach((authorEmail) => {
+    // Step 2: Prepare email options
+    const emailPromises = authorEmails.map((authorEmail) => {
       const mailOptions = {
-        from: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Sender address
-        to: authorEmail, // Recipient address
-        subject: 'PDF Request for Your Research Document',
-        text: `Hello,
+        from: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com',
+        to: authorEmail,
+        subject: `PDF Request for Your Research Document`,
+        text: `
+          Hello,
 
-You have received a request for your research titled "${researchTitle}" from ${requesterName} (${requesterEmail}).
+          You have received a request for your research titled "${researchTitle}" 
+          from ${requesterName} (${requesterEmail}).
 
-Purpose: ${requesterName} has requested the document for the purpose of: ${purpose}.
+          Purpose: ${purpose}.
 
-Please respond to the request accordingly.
+          Please respond to the request accordingly.
 
-Best regards,
-Your Research System`,
+          Best regards,
+          Research Team
+        `,
       };
 
-      // Step 3: Send the email
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          console.error('Error sending email:', err);
-        } else {
-          console.log('Email sent to author: ' + info.response);
-        }
-      });
+      // Step 3: Send email
+      return transporter.sendMail(mailOptions);
     });
-  } catch (err) {
-    console.error('Error in sending email notification:', err);
+
+    await Promise.all(emailPromises); // Send all emails concurrently
+    console.log('Emails sent successfully.');
+  } catch (error) {
+    console.error('Error in sending email notifications:', error.message);
   }
 };
 
