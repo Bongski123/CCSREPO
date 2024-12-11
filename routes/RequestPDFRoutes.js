@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer'); // Optional: For sending email notifications
 require('dotenv').config();
-
+dotenv.config();
 // Mock function to simulate storing the request in the database
 const requestPdf = async ({ researchId, researchTitle, authorName, requesterName, requesterEmail, purpose }) => {
   // Replace with your actual database logic
