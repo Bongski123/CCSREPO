@@ -127,43 +127,41 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const researchId = result.insertId;
 
     // Insert authors with their emails
-   // Modify insertAuthors function to handle first_name and last_name separately
-const insertAuthors = async (researchId, fullNames) => {
-  const authorNames = fullNames.split(',').map(name => name.trim());
-  
-  for (const fullName of authorNames) {
-    const [first_name, last_name] = fullName.split(' '); // Assuming fullName is "first_name last_name"
+    const insertAuthors = async (researchId, fullNames) => {
+      const authorNames = fullNames.split(',').map(name => name.trim());
     
-    // Query to get email by first_name and last_name
-    const [users] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND last_name = ?', [first_name, last_name]);
+      for (const fullName of authorNames) {
+        const [first_name, last_name] = fullName.split(' '); // Assuming fullName is "first_name last_name"
+        
+        // Query to get email by first_name and last_name
+        const [users] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND last_name = ?', [first_name, last_name]);
+        
+        if (users.length === 0) {
+          console.log(`User with name ${first_name} ${last_name} not found in users table.`);
+          continue;  // Skip if no matching user is found
+        }
     
-    if (users.length === 0) {
-      console.log(`User with name ${first_name} ${last_name} not found in users table.`);
-      continue;  // Skip if no matching user is found
-    }
-    console.log(`Found user email: ${email}`);  // To check if the email is being retrieved properly
-
-
-    const email = users[0].email;
+        // Make sure to extract the email here AFTER the query result is returned
+        const email = users[0].email;
     
-    // Check if author already exists in authors table
-    let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [fullName, email]);
-    if (author.length === 0) {
-      // Insert into authors table if the author doesn't exist yet
-      const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
-      author = { author_id: result.insertId };
-    } else {
-      author = author[0];
-    }
-
-    console.log(`Found user email: ${email}`);  // To check if the email is being retrieved properly
-
-
-    // Insert author into research_authors table
-    await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
-  }
-};
-
+        // Log the email to ensure it's being fetched correctly
+        console.log(`Found user email: ${email}`);
+    
+        // Check if author already exists in authors table
+        let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [fullName, email]);
+        if (author.length === 0) {
+          // Insert into authors table if the author doesn't exist yet
+          const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
+          author = { author_id: result.insertId };
+        } else {
+          author = author[0];
+        }
+    
+        // Insert author into research_authors table
+        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+      }
+    };
+    
 
     await insertAuthors(researchId, authors);
 
