@@ -12,8 +12,8 @@ const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',  // Set the SMTP host explicitly for Gmail
   port: 465,
   auth: {
-    user: process.env.EMAIL_USER,  // Your Gmail email address from .env file
-    pass: process.env.EMAIL_PASS,  // Your Gmail app password or password from .env file
+    user: 'ncfresearchnexus@gmail.com',  // Your Gmail email address from .env file
+    pass: 'yekryakuggghqdye',  // Your Gmail app password or password from .env file
   },
 });
 
@@ -44,7 +44,7 @@ router.post('/request-pdf', (req, res) => {
 
     // Construct the email message
     const mailOptions = {
-      from: process.env.EMAIL_USER, // The sender's email address from .env
+      from: 'ncfresearchnexus@gmail.com', // The sender's email address from .env
       to: authorEmails.join(','), // Send the email to all authors
       subject: `Request for PDF: ${researchTitle}`,
       text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
