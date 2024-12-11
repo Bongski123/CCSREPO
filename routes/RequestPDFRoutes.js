@@ -1,79 +1,54 @@
 const express = require('express');
-const db = require('../database/db');
-const sendEmailNotification = require('../controllers/EmailService'); // Import the email service
+const db = require('../database/db'); // Database connection
+const sendEmailNotification = require('../controllers/EmailService'); // Email service
 const router = express.Router();
 
-// POST /request-pdf endpoint
+// POST /request-pdf endpoint to send email to author
 router.post('/request-pdf', (req, res) => {
-  const { researchId, requesterName, requesterEmail, purpose } = req.body;
+  const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
 
-  // Step 1: Fetch the research title based on researchId
+  // Step 1: Fetch the author's email based on the researchId
   db.query(
-    'SELECT title FROM researches WHERE research_id = ?',
+    `SELECT a.email
+FROM authors a
+JOIN research_authors ra ON a.author_id = ra.author_id
+WHERE ra.research_id = 64;
+`,
     [researchId],
     (err, results) => {
       if (err) {
-        console.error('Error fetching research details:', err);
-        return res.status(500).json({ error: 'Error fetching research details' });
+        return res.status(500).json({ error: 'Error fetching author details' });
       }
 
-      const researchTitle = results[0]?.title;
-
-      if (!researchTitle) {
-        return res.status(404).json({ error: 'Research not found' });
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'No authors found for this research' });
       }
 
-      // Step 2: Insert the PDF request into the 'pdf_requests' table
-      db.query(
-        'INSERT INTO pdf_requests (research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?)',
-        [researchTitle, requesterName, requesterEmail, purpose],
-        (err, result) => {
-          if (err) {
-            console.error('Error inserting request into database:', err);
-            return res.status(500).json({ error: 'Error inserting request into database' });
-          }
+      const authorEmail = results[0].email; // Get the author's email from the query result
 
-          // Step 3: Fetch all authors for this research (excluding uploader)
-          db.query(
-            'SELECT a.email FROM authors a ' +
-            'JOIN research_authors ra ON a.author_id = ra.author_id ' +
-            'WHERE ra.research_id = ?',
-            [researchId],
-            (err, authorResults) => {
-              if (err) {
-                console.error('Error fetching authors:', err);
-                return res.status(500).json({ error: 'Error fetching authors' });
-              }
+      // Step 2: Prepare the email content
+      const subject = `Request for PDF of ${researchTitle}`;
+      const message = `
+        Hello ${authorName},
+        
+        You have received a request for the PDF of your research titled "${researchTitle}" from:
+        
+        Name: ${requesterName}
+        Email: ${requesterEmail}
+        Purpose: ${purpose}
+        
+        Please respond accordingly.
+      `;
 
-              if (authorResults.length === 0) {
-                return res.status(404).json({ error: 'No authors found for this research' });
-              }
-
-              // Step 4: Send email to each author asynchronously
-              const emailPromises = authorResults.map((author) =>
-                sendEmailNotification(
-                  author.email,
-                  researchTitle,
-                  requesterName,
-                  requesterEmail,
-                  purpose
-                )
-              );
-
-              // Wait for all email notifications to be sent
-              Promise.all(emailPromises)
-                .then(() => {
-                  // Step 5: Send success response
-                  res.status(200).json({ message: 'Request sent successfully to authors!' });
-                })
-                .catch((err) => {
-                  console.error('Error sending email notifications:', err);
-                  res.status(500).json({ error: 'Error sending email notifications' });
-                });
-            }
-          );
-        }
-      );
+      // Step 3: Send email to the author
+      sendEmailNotification(authorEmail, subject, message)
+        .then(() => {
+          res.status(200).json({ message: 'Request sent successfully to the author!' });
+        })
+        .catch((err) => {
+          console.error('Error sending email:', err);
+          res.status(500).json({ error: 'Failed to send email' });
+        });
     }
   );
 });
