@@ -42,6 +42,7 @@ const InstitutionRoutes =require("./routes/InstitutionRoutes")
 
 const googleRoutes=require("./routes/googleLogin");
 
+const privacyRoutes = require('./routes/FilePrivacy'); // Path to the file with the above route
 
 //reset password
 
@@ -71,6 +72,7 @@ app.use(PasswordReset);
 app.use(documentRoutes);
 app.use(adminRoutes);
 app.use(Updatefiles);
+app.use(privacyRoutes);
 
 // Browse Filter
 app.use(filterRoutes);
