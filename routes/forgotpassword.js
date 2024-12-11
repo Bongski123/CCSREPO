@@ -18,14 +18,13 @@ const users = {};
 
 // Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secrure: true,
+  service: 'Gmail',
   auth: {
-    user: 'aalmario@gbox.ncf.edu.ph',
-    pass: 'txduvrocvkpmdhzg',
+    user: process.env.EMAIL_USER, // Your Gmail address
+    pass: process.env.EMAIL_PASS, // Your App Password or Gmail password
   },
 });
+
 
 
 
