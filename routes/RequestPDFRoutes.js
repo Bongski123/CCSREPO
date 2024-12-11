@@ -1,56 +1,50 @@
 const express = require('express');
-const db = require('../database/db'); // Database connection
-const sendEmailNotification = require('../controllers/EmailService'); // Email service
 const router = express.Router();
+const nodemailer = require('nodemailer');  // Optional: For sending email notifications
 
-// POST /request-pdf endpoint to send email to author
-router.post('/request-pdf', (req, res) => {
+
+router.post('/request-pdf', async (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
 
-  // Step 1: Fetch the author's email based on the researchId
-  db.query(
-    `SELECT a.email
-FROM authors a
-JOIN research_authors ra ON a.author_id = ra.author_id
-WHERE ra.research_id = ?;
-`,
-    [researchId],
-    (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Error fetching author details' });
-      }
+  // Validate input data
+  if (!researchId || !researchTitle || !authorName || !requesterName || !requesterEmail || !purpose) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
 
-      if (results.length === 0) {
-        return res.status(404).json({ error: 'No authors found for this research' });
-      }
+  // Optionally, store the request in the database
+  try {
+    await requestPdf({
+      researchId,
+      researchTitle,
+      authorName,
+      requesterName,
+      requesterEmail,
+      purpose,
+    });
 
-      const authorEmail = results[0].email; // Get the author's email from the query result
+    // Send confirmation email (optional)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-      // Step 2: Prepare the email content
-      const subject = `Request for PDF of ${researchTitle}`;
-      const message = `
-        Hello ${authorName},
-        
-        You have received a request for the PDF of your research titled "${researchTitle}" from:
-        
-        Name: ${requesterName}
-        Email: ${requesterEmail}
-        Purpose: ${purpose}
-        
-        Please respond accordingly.
-      `;
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: requesterEmail,
+      subject: 'PDF Request Confirmation',
+      text: `Dear ${requesterName},\n\nYour request for the PDF of the research titled "${researchTitle}" has been received. We will process your request shortly.\n\nBest regards,\nResearch Team`,
+    };
 
-      // Step 3: Send email to the author
-      sendEmailNotification(authorEmail, subject, message)
-        .then(() => {
-          res.status(200).json({ message: 'Request sent successfully to the author!' });
-        })
-        .catch((err) => {
-          console.error('Error sending email:', err);
-          res.status(500).json({ error: 'Failed to send email' });
-        });
-    }
-  );
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Your PDF request has been successfully submitted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while processing your request' });
+  }
 });
 
 module.exports = router;
