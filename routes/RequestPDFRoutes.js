@@ -3,13 +3,8 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer'); // Optional: For sending email notifications
-
-
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const dotenv = require('dotenv');
-
 dotenv.config();
 
 const app = express();
