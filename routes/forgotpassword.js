@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
     user: process.env.EMAIL_USER || "aalmario@gbox.ncf.edu.ph",
-    pass: process.env.EMAIL_PASS || "cjzuuajhlxrkuzce",
+    pass: process.env.EMAIL_PASS || "txduvrocvkpmdhzg",
   },
 });
 
