@@ -127,33 +127,34 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const researchId = result.insertId;
 
     // Insert authors with their emails
- // Insert authors with their emails
-const insertAuthors = async (researchId, authors) => {
-  const authorNames = authors.split(',').map(name => name.trim());
-  for (const name of authorNames) {
-    const [firstName, lastName] = name.split(' ');  // Assuming authors' names are separated by a space
-
-    // Get the email from users table by first name and last name
-    const [user] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND last_name = ?', [firstName, lastName]);
-
-    if (user.length === 0) {
-      return res.status(404).json({ error: `User with name ${firstName} ${lastName} not found in users table.` });
-    }
-
-    const email = user[0].email;
-    let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
-
-    // If author doesn't exist, insert the author along with the email
-    if (author.length === 0) {
-      const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
-      author = { author_id: result.insertId };
-    } else {
-      author = author[0];
-    }
-
-    await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
-  }
-};
+    const insertAuthors = async (researchId, fullNames) => {
+      const authorNames = fullNames.split(',').map(name => name.trim());
+      for (const fullName of authorNames) {
+        const [first_name, last_name] = fullName.split(' '); // Assuming fullName is "first_name last_name"
+        
+        // Query to get email by first_name and last_name
+        const [user] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND last_name = ?', [first_name, last_name]);
+        
+        if (user.length === 0) {
+          return res.status(404).json({ error: `User with name ${first_name} ${last_name} not found in users table.` });
+        }
+    
+        const email = user[0].email;
+        
+        // Check if author already exists in authors table
+        let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [fullName]);
+        if (author.length === 0) {
+          const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
+          author = { author_id: result.insertId };
+        } else {
+          author = author[0];
+        }
+    
+        // Insert author into research_authors table
+        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+      }
+    };
+    
 
     await insertAuthors(researchId, authors);
 
