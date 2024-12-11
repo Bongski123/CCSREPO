@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../database/db');
 const router = express.Router();
-
+const nodemailer = require('nodemailer');
 // Middleware to validate privacy value
 const validatePrivacy = (req, res, next) => {
   const { privacy } = req.body;
