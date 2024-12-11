@@ -1,12 +1,12 @@
 const nodemailer = require('nodemailer');
 const db = require('../database/db'); // Import your database connection
-
+require('dotenv').config();
 // Set up email transport using Nodemailer
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or another email service like Outlook, etc.
+  service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // Your email address
-    pass: process.env.EMAIL_PASS, // Your email password or app-specific password
+    user: process.env.SMTP_USER, // Gmail email
+    pass: process.env.SMTP_PASS, // App Password generated from Google Account
   },
 });
 
