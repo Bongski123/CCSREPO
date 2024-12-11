@@ -1,8 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer'); // Optional: For sending email notifications
-require('dotenv').config();
+const express = require('express');
+const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const cors = require('cors');
+const dotenv = require('dotenv');
+
 dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
 // Mock function to simulate storing the request in the database
 const requestPdf = async ({ researchId, researchTitle, authorName, requesterName, requesterEmail, purpose }) => {
   // Replace with your actual database logic
