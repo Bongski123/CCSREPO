@@ -12,7 +12,7 @@ router.post('/request-pdf', (req, res) => {
     `SELECT a.email
 FROM authors a
 JOIN research_authors ra ON a.author_id = ra.author_id
-WHERE ra.research_id = 64;
+WHERE ra.research_id = ?;
 `,
     [researchId],
     (err, results) => {
