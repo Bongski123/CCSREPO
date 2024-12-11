@@ -25,7 +25,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Endpoint to send verification code
+
+
 app.post('/send-code', async (req, res) => {
   const { email } = req.body;
 
