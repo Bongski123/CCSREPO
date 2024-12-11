@@ -9,8 +9,8 @@ dotenv.config(); // Load environment variables from .env file
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
   secure: true,
-  host: 'smtp.gmail.com',  // Set the SMTP host explicitly for Gmail
-  port: 465,
+  host: process.env.EMAIL_HOST,  // Set the SMTP host explicitly for Gmail
+  port: process.env.EMAIL_PORT,
   auth: {
     user: process.env.EMAIL_USER,  // Your Gmail email address from .env file
     pass: process.env.EMAIL_PASS,  // Your Gmail app password or password from .env file
@@ -21,6 +21,15 @@ const transporter = nodemailer.createTransport({
 router.post('/request-pdf', (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
 
+  console.log('Received request for PDF with details:', {
+    researchId,
+    researchTitle,
+    authorName,
+    requesterName,
+    requesterEmail,
+    purpose
+  });
+
   // Query to fetch all authors' emails based on researchId
   const query = `
     SELECT a.email 
@@ -29,18 +38,24 @@ router.post('/request-pdf', (req, res) => {
     WHERE ra.research_id = ?;
   `;
 
+  console.log('Executing query:', query, 'with researchId:', researchId);
+
   db.execute(query, [researchId], (err, results) => {
     if (err) {
-      console.error('Database query error: ', err);
+      console.error('Database query error:', err);
       return res.status(500).json({ error: 'Database error occurred.' });
     }
 
+    console.log('Query results:', results);
+
     if (results.length === 0) {
+      console.log('No authors found for the given research ID:', researchId);
       return res.status(404).json({ error: 'No authors found for the given research ID.' });
     }
 
     // Collect all author emails from the query results
     const authorEmails = results.map(result => result.email);
+    console.log('Found author emails:', authorEmails);
 
     // Construct the email message
     const mailOptions = {
@@ -50,13 +65,16 @@ router.post('/request-pdf', (req, res) => {
       text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
     };
 
+    console.log('Sending email with options:', mailOptions);
+
     // Send the email
     transporter.sendMail(mailOptions, (emailErr, info) => {
       if (emailErr) {
-        console.log(emailErr);
+        console.error('Error sending email:', emailErr);
         return res.status(500).json({ error: 'Something went wrong while sending the email.' });
       }
 
+      console.log('Email sent successfully:', info);
       return res.status(200).json({ message: 'Your request has been sent to the authors.' });
     });
   });
