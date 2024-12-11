@@ -42,7 +42,7 @@ app.post('/send-code', async (req, res) => {
   // Send email
   try {
     await transporter.sendMail({
-      from: 'aalmario@gbox.ncf.edu.ph',
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'Password Reset Code',
       text: `Your verification code is ${code}`,

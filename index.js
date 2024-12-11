@@ -63,7 +63,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 
-const PORT = process.env.PORT || 10121;
+const PORT = process.env.PORT ;
 
 // Algorithm
 app.use("/search", searchRoutes);
