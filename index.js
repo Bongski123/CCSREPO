@@ -36,8 +36,8 @@ const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 const keywordsRoutes = require("./routes/keywords");
 
 const Notification = require("./routes/UserDash");
-
-const InstitutionRoutes =require("./routes/InstitutionRoutes")
+const pdfRequestRoutes = require("./routes/RequestPDFRoutes");
+const InstitutionRoutes =require("./routes/InstitutionRoutes");
 //google login
 
 const googleRoutes=require("./routes/googleLogin");
@@ -87,7 +87,7 @@ app.use(categoriesRoutes);
 
 app.use(keywordsRoutes);
 app.use(InstitutionRoutes);
-
+app.use(pdfRequestRoutes);
 app.use(pdfRoutes);
 
 //googlef
