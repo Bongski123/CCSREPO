@@ -38,7 +38,7 @@ router.post('/request-pdf', async (req, res) => {
     });
 
     const mailOptions = {
-      from: process.env.SMTP_USER, // Use the same email as SMTP_USER
+      from: process.env.SMTP_USER || 'ncfresearchnexus@gmail.com', // Use the same email as SMTP_USER
       to: requesterEmail,
       subject: 'PDF Request Confirmation',
       text: `Dear ${requesterName},\n\nYour request for the PDF of the research titled "${researchTitle}" has been received. We will process your request shortly.\n\nBest regards,\nResearch Team`,
