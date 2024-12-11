@@ -18,10 +18,12 @@ const users = {};
 
 // Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: 'Gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secrure: true,
   auth: {
-    Username: process.env.EMAIL_USER || "aalmario@gbox.ncf.edu.ph",
-    Password: process.env.EMAIL_PASS || "txduvrocvkpmdhzg",
+    user: 'aalmario@gbox.ncf.edu.ph',
+    pass: 'txduvrocvkpmdhzg',
   },
 });
 
@@ -41,7 +43,7 @@ app.post('/send-code', async (req, res) => {
   // Send email
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: 'aalmario@gbox.ncf.edu.ph',
       to: email,
       subject: 'Password Reset Code',
       text: `Your verification code is ${code}`,
