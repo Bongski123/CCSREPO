@@ -1,24 +1,27 @@
+
 const express = require('express');
-const router = express.Router();
-const nodemailer = require('nodemailer'); // For sending emails
-const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
 const db = require('../database/db'); // Import your database connection
 
-dotenv.config(); // Load environment variables from .env file
+const cors = require('cors');
+const dotenv = require('dotenv');
 
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
-  secure: true,
-  host: process.env.EMAIL_HOST,  // Set the SMTP host explicitly for Gmail
-  port: process.env.EMAIL_PORT,
+  service: 'Gmail',
   auth: {
-    user: process.env.EMAIL_USER,  // Your Gmail email address from .env file
-    pass: process.env.EMAIL_PASS,  // Your Gmail app password or password from .env file
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
 // Define the route for handling PDF requests
-router.post('/request-pdf', (req, res) => {
+app.post('/request-pdf', (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
 
   console.log('Received request for PDF with details:', {
@@ -80,4 +83,4 @@ router.post('/request-pdf', (req, res) => {
   });
 });
 
-module.exports = router;
+
