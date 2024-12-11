@@ -20,8 +20,8 @@ const users = {};
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER || "aalmario@gbox.ncf.edu.ph",
+    pass: process.env.EMAIL_PASS || "cjzuuajhlxrkuzce",
   },
 });
 

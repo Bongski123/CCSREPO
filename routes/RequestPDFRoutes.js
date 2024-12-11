@@ -10,14 +10,13 @@ const db = require('../database/db'); // Import your database connectionre
 console.log(process.env.EMAIL_USER);
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
-  secure: false,
-  host: 'smtp.gmail.com',  // Set the SMTP host explicitly for Gmail
-  port: 587,
+  service: 'Gmail',
   auth: {
-    user: process.env.EMAIL_USER,  // Your Gmail email address from .env file
-    pass: process.env.EMAIL_PASS,  // Your Gmail app password or password from .env file
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
+
 
 // Define the route for handling PDF requests
 router.post('/request-pdf', (req, res) => {
