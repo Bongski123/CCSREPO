@@ -1,22 +1,23 @@
-
 const express = require('express');
 const nodemailer = require('nodemailer');
 const db = require('../database/db'); // Import your database connection
-
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config(); // Load environment variables from .env file
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// Middleware setup
+app.use(cors());               // Enable Cross-Origin Resource Sharing
+app.use(express.json());        // Parse incoming JSON requests
+
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER,  // Gmail email address from .env
+    pass: process.env.EMAIL_PASS,  // Gmail app password or password from .env
   },
 });
 
@@ -62,8 +63,8 @@ app.post('/request-pdf', (req, res) => {
 
     // Construct the email message
     const mailOptions = {
-      from: process.env.EMAIL_USER, // The sender's email address from .env
-      to: authorEmails.join(','), // Send the email to all authors
+      from: process.env.EMAIL_USER,  // The sender's email address from .env
+      to: authorEmails.join(','),    // Send the email to all authors
       subject: `Request for PDF: ${researchTitle}`,
       text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
     };
@@ -83,4 +84,8 @@ app.post('/request-pdf', (req, res) => {
   });
 });
 
-
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
