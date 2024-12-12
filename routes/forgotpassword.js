@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const EMAIL_USER = process.env.EMAIL_USER || "ncfresearchnexus@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS || "xffgezncoofpbtrz";
+const EMAIL_PASS = process.env.EMAIL_PASS || "vkpiuxczvziqaqdl";
 
 dotenv.config();
 
