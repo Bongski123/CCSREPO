@@ -4,6 +4,8 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const EMAIL_USER = process.env.EMAIL_USER || "ncfresearchnexus@gmail.com";
+const EMAIL_PASS = process.env.EMAIL_PASS || "xffgezncoofpbtrz";
 
 dotenv.config();
 
@@ -20,8 +22,8 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
   },
 });
 
