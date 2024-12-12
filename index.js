@@ -9,8 +9,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const db = require("./database/db");
 const dotenv = require('dotenv');
-
-
+dotenv('dotenv').config();
 
 dotenv.config();
 
