@@ -120,10 +120,10 @@ router.get('/authors/:research_id', async (req, res) => {
         }
   
         const getAuthorDocumentsQuery = `
-            SELECT r.* 
-            FROM researches r
-            JOIN research_authors ra ON r.research_id = ra.research_id
-            WHERE ra.author_id = ?
+           SELECT a.*
+        FROM authors a
+        JOIN research_authors ra ON a.author_id = ra.author_id
+        WHERE ra.research_id = ?;
         `;
         const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [research_id]);
   
