@@ -186,7 +186,7 @@ router.get('/all/authors/:research_id', async (req, res) => {
 
         // Query to fetch authors associated with the research_id
         const getAuthorsQuery = `
-            SELECT a.research_id, a.author_name, a.email
+            SELECT a.author_id, a.author_name, a.email
             FROM authors a
             JOIN research_authors ra ON a.author_id = ra.author_id
             WHERE ra.research_id = ?
