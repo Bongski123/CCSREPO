@@ -107,33 +107,36 @@ router.get('/keywords/:keyword_id', async (req, res) => {
 router.get('/authors/:research_id', async (req, res) => {
     try {
         const research_id = req.params.research_id;
-  
+
         if (!research_id) {
-            return res.status(400).json({ error: 'Please provide author id' });
+            return res.status(400).json({ error: 'Please provide a valid research ID' });
         }
-  
-        const getAuthorQuery = 'SELECT * FROM authors WHERE author_id = ?';
-        const [author] = await db.query(getAuthorQuery, [research_id]);
-  
-        if (author.length === 0) {
-            return res.status(404).json({ error: 'Author not found!' });
-        }
-  
-        const getAuthorDocumentsQuery = `
-           SELECT a.*
-        FROM authors a
-        JOIN research_authors ra ON a.author_id = ra.author_id
-        WHERE ra.research_id = ?;
+
+        // First query to get the authors associated with the given research_id
+        const getAuthorsQuery = `
+            SELECT a.author_id, a.author_name, a.email
+            FROM authors a
+            JOIN research_authors ra ON a.author_id = ra.author_id
+            WHERE ra.research_id = ?
         `;
-        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [research_id]);
-  
-        res.status(200).json({ author: author[0], authorDocuments });
-  
+        
+        // Execute the query to get authors linked to the research paper
+        const [authors] = await db.query(getAuthorsQuery, [research_id]);
+
+        // If no authors are found, return a 404
+        if (authors.length === 0) {
+            return res.status(404).json({ error: 'No authors found for this research' });
+        }
+
+        // Return the authors data in the response
+        res.status(200).json(authors);
+
     } catch (error) {
-        console.error('Error getting documents from an author:', error);
-        res.status(500).json({ error: 'Authors Endpoint Error!' });
+        console.error('Error fetching authors:', error.message);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+});
+
   
 // Endpoint to fetch authors based on query
 router.get('/authors', async (req, res) => {
