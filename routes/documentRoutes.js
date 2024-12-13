@@ -83,8 +83,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!categories) return res.status(400).json({ error: "Categories are required!" });
     if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
 
-    // Handle missing fields by defaulting to empty strings if undefined
-    const authorList = authors ? authors.split(',').map(name => name.trim()) : [];
+    // Split authors into an array of objects containing author_name and email
+    const authorList = authors
+      ? authors.split(',').map(author => {
+          const [author_name, email] = author.split(';');
+          return { author_name: author_name.trim(), email: email.trim() };
+        })
+      : [];
+
     const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
     const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
 
@@ -138,36 +144,17 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Insert authors into the authors table and associate with the research
     const insertAuthors = async (researchId, authors) => {
-      for (const author of authors) {
-        // Assuming authors are in the format: "authorName; authorEmail"
-        const [name, email] = author.split(';').map(val => val.trim());  // Make sure there's no extra whitespace
-    
-        // Log the author info to ensure both fields are parsed correctly
-        console.log('Author:', { name, email });
-    
-        // Ensure both fields are not empty
-        if (!name || !email) {
-          console.log('Skipping author due to missing name or email:', { name, email });
-          continue; // Skip if either name or email is missing
-        }
-    
-        // Check if the author already exists in the authors table
-        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
-    
+      for (const { author_name, email } of authors) {
+        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [author_name, email]);
         if (authorRecord.length === 0) {
-          // If the author does not exist, insert them into the authors table
-          const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
-          authorRecord = { author_id: result.insertId };
+            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [author_name, email]);
+            authorRecord = { author_id: result.insertId };
         } else {
-          // If the author already exists, use the existing author_id
-          authorRecord = authorRecord[0];
+            authorRecord = authorRecord[0];
         }
-    
-        // Insert the research-author relationship
         await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, authorRecord.author_id]);
       }
     };
-    
 
     await insertAuthors(researchId, authorList);
 
@@ -203,15 +190,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     await insertKeywords(researchId, keywordList);
 
-    res.status(201).json({ message: "Document Uploaded Successfully", fileId });
-  } catch (error) {
-    console.error("Error Upload Document:", error);
-    res.status(500).json({ error: "Upload Document Endpoint Error!" });
+    res.status(201).json({ message: "Research uploaded successfully!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "An error occurred while uploading the research" });
   }
 });
-
-
-
 
 // DELETE research and associated records
 router.delete('/delete-research/:research_id', async (req, res) => {
@@ -227,34 +211,22 @@ router.delete('/delete-research/:research_id', async (req, res) => {
 
   try {
       // Delete associated records first
-      const queries = [
-          'DELETE FROM research_categories WHERE research_id = ?',
-          'DELETE FROM search_logs WHERE research_id = ?',
-          'DELETE FROM collections WHERE research_id = ?',
-          'DELETE FROM notifications WHERE research_id = ?',
-          'DELETE FROM research_keywords WHERE research_id = ?',
-          'DELETE FROM research_authors WHERE research_id = ?'
-      ];
+      await connection.query("DELETE FROM research_authors WHERE research_id = ?", [researchId]);
+      await connection.query("DELETE FROM research_categories WHERE research_id = ?", [researchId]);
+      await connection.query("DELETE FROM research_keywords WHERE research_id = ?", [researchId]);
 
-      for (const query of queries) {
-          await connection.execute(query, [researchId]);
-      }
-
-      // Now delete the main research record
-      const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
-      await connection.execute(deleteResearchQuery, [researchId]);
+      // Delete the research
+      await connection.query("DELETE FROM researches WHERE research_id = ?", [researchId]);
 
       // Commit the transaction
       await connection.commit();
-      res.status(200).json({ message: 'Research and associated records deleted successfully.' });
-  } catch (error) {
-      // Rollback the transaction in case of an error
-      await connection.rollback();
-      console.error(error);
-      res.status(500).json({ message: 'An error occurred while deleting the research.' });
+      res.status(200).json({ message: 'Research deleted successfully!' });
+  } catch (err) {
+      await connection.rollback(); // Rollback if error occurs
+      console.error(err);
+      res.status(500).json({ error: 'An error occurred while deleting the research' });
   } finally {
-      // Release the connection
-      connection.release();
+      connection.release(); // Release the connection
   }
 });
 
