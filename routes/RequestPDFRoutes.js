@@ -1,20 +1,30 @@
 const express = require('express');
-require('dotenv').config();
+
 const router = express.Router();
 const nodemailer = require('nodemailer'); // For sending emails
 const db = require('../database/db'); // Import your database connection
-
 
 // Setup nodemailer transporter directly with credentials
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: true, // true for 465, false for other ports
+  secure: true,
   auth: {
-      user: 'ncfresearchnexus@gmail.com', // Your Gmail address
-      pass: 'uvebkflhfwuwqcuk', // Your App Password (make sure to remove any spaces)
+    user: 'ncfresearchnexus@gmail.com',
+    pass: 'uvebkflhfwuwqcuk',
   },
+  debug: true, // Enable debug logging
 });
+
+// Verify SMTP server connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('SMTP server connection failed:', error);
+  } else {
+    console.log('SMTP server is ready:', success);
+  }
+});
+
 // Define the route for handling PDF requests
 router.post('/request-pdf', async (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
@@ -53,22 +63,23 @@ router.post('/request-pdf', async (req, res) => {
     // Send an individual email to each author
     for (const email of authorEmails) {
       const mailOptions = {
-        from:'ncfresearchnexus@gmail.com',
+        from: 'ncfresearchnexus@gmail.com',
         to: email, // Send email to one author at a time
         subject: `Request for PDF: ${researchTitle}`,
         text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
       };
 
-      // Send the email
-      await transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error(`Error sending email to ${email}:`, error);
-          return res.status(500).json({ error: `Something went wrong while sending the email to ${email}.` });
-        }
+      // Use await to wait for each email to send before continuing
+      try {
+        const info = await transporter.sendMail(mailOptions);  // No callback, directly using the promise
         console.log(`Email sent to ${email}:`, info.response);
-      });
+      } catch (error) {
+        console.error(`Error sending email to ${email}:`, error);
+        return res.status(500).json({ error: `Something went wrong while sending the email to ${email}.` });
+      }
     }
 
+    // After all emails have been sent successfully
     return res.status(200).json({ message: 'Your request has been sent to the authors.' });
 
   } catch (error) {
