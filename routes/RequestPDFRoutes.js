@@ -29,6 +29,7 @@ router.post('/request-pdf', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, 'pending');
     `;
 
+    // Use the researchId from the request body
     await db.query(insertQuery, [researchId, researchTitle, requesterName, requesterEmail, purpose]);
 
     // Return success response
