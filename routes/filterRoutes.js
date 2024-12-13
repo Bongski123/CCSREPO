@@ -177,33 +177,34 @@ ORDER BY
 
 // Assuming you have a separate route for authors
 router.get('/authors/:research_id', async (req, res) => {
-    try {
-      const researchId = req.params.research_id;
+    const researchId = req.params.research_id;
   
-      // Revised query to return the correct author names
+    try {
+      // Ensure the researchId is provided
+      if (!researchId) {
+        return res.status(400).json({ message: 'Research ID is required' });
+      }
+  
+      // Query to get the authors associated with the research paper
       const getAuthorsQuery = `
-       SELECT a.author_name, a.email
-FROM authors a
-JOIN research_authors ra ON a.author_id = ra.author_id
-WHERE ra.research_id = ?
-;
+        SELECT a.author_name, a.email
+        FROM authors a
+        JOIN research_authors ra ON a.author_id = ra.author_id
+        WHERE ra.research_id = ?
       `;
   
-      // Using `db.promise()` for async/await
+      // Execute the query
       const [rows] = await db.promise().execute(getAuthorsQuery, [researchId]);
   
-      // Check if rows is empty
+      // Check if no authors were found
       if (rows.length === 0) {
         return res.status(404).json({ message: 'No authors found for this research.' });
       }
   
-      // Log authors fetched for debugging
-      console.log('Authors fetched:', rows);
-  
-      // Respond with an array of author names
+      // Respond with the authors
       res.status(200).json(rows);
     } catch (error) {
-      // More specific logging for debugging purposes
+      // Log the error and send a response
       console.error('Error fetching authors:', error.message);
       res.status(500).json({ error: 'Internal Server Error' });
     }
