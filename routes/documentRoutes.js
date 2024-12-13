@@ -132,6 +132,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     );
     const insertAuthors = async (researchId, authors) => {
       for (const { name, email } of authors) {
+          if (!name || !email) {
+              console.error('Author name or email is missing:', { name, email });
+              continue; // Skip invalid entries
+          }
+  
           // Check if the author already exists in the authors table based on name and email
           let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
   
@@ -150,6 +155,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   
   // Example usage
   await insertAuthors(researchId, authors);
+  
   
 
   // Insert categories
