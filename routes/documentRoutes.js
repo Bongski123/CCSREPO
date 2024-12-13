@@ -142,8 +142,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         // Assuming authors are in the format: "authorName; authorEmail"
         const [name, email] = author.split(';').map(val => val.trim());  // Make sure there's no extra whitespace
     
+        // Log the author info to ensure both fields are parsed correctly
+        console.log('Author:', { name, email });
+    
         // Ensure both fields are not empty
         if (!name || !email) {
+          console.log('Skipping author due to missing name or email:', { name, email });
           continue; // Skip if either name or email is missing
         }
     
