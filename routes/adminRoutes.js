@@ -79,12 +79,13 @@ router.get('/research/:research_id', async (req, res) => {
 
     // SQL query to retrieve research details along with concatenated authors, keywords, and categories
     const getResearchQuery = `
- SELECT 
+SELECT 
     r.*,  
     r.publish_date,  
     GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
     GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories  
+    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories,
+    GROUP_CONCAT(DISTINCT a.email SEPARATOR ', ') AS author_emails  -- Get all emails of authors for the specific research_id
 FROM 
     researches r
 LEFT JOIN 
@@ -105,6 +106,7 @@ GROUP BY
     r.research_id;
 
 
+
     `;
 
     const [rows] = await db.query(getResearchQuery, [researchId]);
@@ -117,9 +119,11 @@ GROUP BY
     const research = {
       research_id: rows[0].research_id,
       title: rows[0].title,
+      publish_date: rows[0].publish_date,
       abstract: rows[0].abstract,
       status: rows[0].status || 'Not specified',
       authors: rows[0].authors || 'No authors available',
+      author_emails: rows[0].author_emails || 'No authors available',
       keywords: rows[0].keywords || 'No keywords available',
       categories: rows[0].categories || 'No categories available'
     };
