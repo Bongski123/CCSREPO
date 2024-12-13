@@ -1,26 +1,28 @@
 const express = require('express');
-
 require('dotenv').config();
 const router = express.Router();
 const nodemailer = require('nodemailer'); // For sending emails
 
-const db = require('../database/db'); // Import your database connectionre
+const db = require('../database/db'); // Import your database connection
 
-
-console.log(process.env.EMAIL_USER);
 // Configure nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
-  service: 'Gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+      user: 'ncfresearchnexus@gmail.com', // Your Gmail address
+      pass: 'uvebkflhfwuwqcuk', // Your App Password (make sure to remove any spaces)
   },
 });
 
-
 // Define the route for handling PDF requests
-router.post('/request-pdf', (req, res) => {
+router.post('/request-pdf', async (req, res) => {
   const { researchId, researchTitle, authorName, requesterName, requesterEmail, purpose } = req.body;
+
+  if (!researchId || !researchTitle || !authorName || !requesterName || !requesterEmail || !purpose) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
 
   // Query to fetch all authors' emails based on researchId
   const query = `
@@ -30,11 +32,8 @@ router.post('/request-pdf', (req, res) => {
     WHERE ra.research_id = ?;
   `;
 
-  db.execute(query, [researchId], (err, results) => {
-    if (err) {
-      console.error('Database query error: ', err);
-      return res.status(500).json({ error: 'Database error occurred.' });
-    }
+  try {
+    const [results] = await db.query(query, [researchId]);
 
     if (results.length === 0) {
       return res.status(404).json({ error: 'No authors found for the given research ID.' });
@@ -52,15 +51,14 @@ router.post('/request-pdf', (req, res) => {
     };
 
     // Send the email
-    transporter.sendMail(mailOptions, (emailErr, info) => {
-      if (emailErr) {
-        console.log(emailErr);
-        return res.status(500).json({ error: 'Something went wrong while sending the email.' });
-      }
+    await transporter.sendMail(mailOptions);
 
-      return res.status(200).json({ message: 'Your request has been sent to the authors.' });
-    });
-  });
+    return res.status(200).json({ message: 'Your request has been sent to the authors.' });
+
+  } catch (error) {
+    console.error('Error in /request-pdf route:', error);
+    return res.status(500).json({ error: 'Something went wrong while sending the email.' });
+  }
 });
 
 module.exports = router;
