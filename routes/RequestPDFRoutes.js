@@ -50,24 +50,26 @@ router.post('/request-pdf', async (req, res) => {
       return res.status(400).json({ error: 'Some author email addresses are invalid.' });
     }
 
-    // Construct the email message
-    const mailOptions = {
-      from: process.env.EMAIL_USER, // Use the Gmail user from env
-      to: authorEmails.join(','), // Send email to all authors
-      subject: `Request for PDF: ${researchTitle}`,
-      text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
-    };
+    // Send an individual email to each author
+    for (const email of authorEmails) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER, // Sender email
+        to: email, // Send email to one author at a time
+        subject: `Request for PDF: ${researchTitle}`,
+        text: `Hello ${authorName},\n\n${requesterName} (${requesterEmail}) has requested the PDF for the research titled "${researchTitle}".\n\nPurpose: ${purpose}\nResearch ID: ${researchId}\n\nBest regards,\nResearch Repository`,
+      };
 
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Something went wrong while sending the email.' });
-      }
+      // Send the email
+      await transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error(`Error sending email to ${email}:`, error);
+          return res.status(500).json({ error: `Something went wrong while sending the email to ${email}.` });
+        }
+        console.log(`Email sent to ${email}:`, info.response);
+      });
+    }
 
-      console.log('Email sent:', info.response);
-      return res.status(200).json({ message: 'Your request has been sent to the authors.' });
-    });
+    return res.status(200).json({ message: 'Your request has been sent to the authors.' });
 
   } catch (error) {
     console.error('Error in /request-pdf route:', error);
