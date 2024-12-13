@@ -103,35 +103,38 @@ router.get('/keywords/:keyword_id', async (req, res) => {
 });
 
 // Browse by authors
-router.get('/authors/:authorId', async (req, res) => {
+// Browse by authors
+router.get('/authors/:research_id', async (req, res) => {
     try {
-        const authorId = req.params.authorId;
-
-        // Validate authorId
-        if (!authorId) {
-            return res.status(400).json({ error: 'Please provide author ID' });
+        const research_id = req.params.research_id;
+  
+        if (!research_id) {
+            return res.status(400).json({ error: 'Please provide author id' });
         }
-
-        // Query to get author ID and author name
-        const getAuthorQuery = 'SELECT author_id, author_name FROM authors WHERE author_id = ?';
-        const [author] = await db.query(getAuthorQuery, [authorId]);
-
-        // Check if author exists
+  
+        const getAuthorQuery = 'SELECT * FROM authors WHERE author_id = ?';
+        const [author] = await db.query(getAuthorQuery, [research_id]);
+  
         if (author.length === 0) {
             return res.status(404).json({ error: 'Author not found!' });
         }
-
-        // Respond with author details
-        res.json({
-            author: author[0], // Return only author_id and author_name
-        });
-
+  
+        const getAuthorDocumentsQuery = `
+            SELECT r.* 
+            FROM researches r
+            JOIN research_authors ra ON r.research_id = ra.research_id
+            WHERE ra.author_id = ?
+        `;
+        const [authorDocuments] = await db.query(getAuthorDocumentsQuery, [research_id]);
+  
+        res.status(200).json({ author: author[0], authorDocuments });
+  
     } catch (error) {
-        console.error('Error fetching author details:', error); // Log the error for debugging
-        res.status(500).json({ message: 'Failed to fetch author details', error: error.message });
+        console.error('Error getting documents from an author:', error);
+        res.status(500).json({ error: 'Authors Endpoint Error!' });
     }
-});
-
+  });
+  
 // Endpoint to fetch authors based on query
 router.get('/authors', async (req, res) => {
     try {
