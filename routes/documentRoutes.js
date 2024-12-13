@@ -59,13 +59,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!categories) return res.status(400).json({ error: "Categories are required!" });
     if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
 
-    const authorList = authors ? authors.split(',').map(name => name.trim()) : [];
-    const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
-    const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
+    const authorList = authors ? authors.split(',').map(author_name => author_name.trim()) : [];
+    const categoryList = categories ? categories.split(',').map(author_name => author_name.trim()) : [];
+    const keywordList = keywords ? keywords.split(',').map(author_name => author_name.trim()) : [];
 
     // Upload file to Google Drive
     const fileMetadata = {
-      name: req.file.originalname, // Use the original file name
+      name: req.file.originalname,
       parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
     };
     const media = {
@@ -101,29 +101,54 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const research_id = result.insertId;
 
-    // Add categories, keywords, and authors
+    // Add categories to research
     if (categoryList.length > 0) {
-      const categoryValues = categoryList.map(category => [research_id, categories]);
-      await db.query("INSERT INTO research_categories (research_id, category_id) VALUES ?", [categoryValues]);
+      const categoryIds = await Promise.all(categoryList.map(async (category) => {
+        const [categoryResult] = await db.query("SELECT category_id FROM categories WHERE category_name = ?", [category]);
+        return categoryResult.length > 0 ? categoryResult[0].category_id : null;
+      }));
+
+      const validCategoryIds = categoryIds.filter(id => id !== null);
+      if (validCategoryIds.length > 0) {
+        const categoryValues = validCategoryIds.map(category_id => [research_id, category_id]);
+        await db.query("INSERT INTO research_categories (research_id, category_id) VALUES ?", [categoryValues]);
+      }
     }
 
+    // Add keywords to research
     if (keywordList.length > 0) {
-      const keywordValues = keywordList.map(keyword => [research_id, keywords]);
-      await db.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES ?", [keywordValues]);
+      const keywordIds = await Promise.all(keywordList.map(async (keyword) => {
+        const [keywordResult] = await db.query("SELECT keyword_id FROM keywords WHERE keyword_name = ?", [keyword]);
+        return keywordResult.length > 0 ? keywordResult[0].keyword_id : null;
+      }));
+
+      const validKeywordIds = keywordIds.filter(id => id !== null);
+      if (validKeywordIds.length > 0) {
+        const keywordValues = validKeywordIds.map(keyword_id => [research_id, keyword_id]);
+        await db.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES ?", [keywordValues]);
+      }
     }
 
+    // Add authors to research
     if (authorList.length > 0) {
       const authorValues = authorList.map(author => {
         const [author_name, email] = author.split(';').map(str => str.trim());
         return [author_name, email];
       });
-      await db.query("INSERT INTO authors (author_name, email) VALUES ?", [authorValues]);
 
-      // Link authors to research
+      // Check if author already exists
+      for (let author of authorValues) {
+        const [existingAuthor] = await db.query("SELECT author_id FROM authors WHERE email = ?", [author[1]]);
+        if (existingAuthor.length === 0) {
+          await db.query("INSERT INTO authors (author_name, email) VALUES ?", [[author]]);
+        }
+      }
+
       const [authorsRows] = await db.query(
         "SELECT author_id FROM authors WHERE email IN (?)",
         [authorList.map(author => author.split(';')[1].trim())]
       );
+
       const authorResearchValues = authorsRows.map(row => [research_id, row.author_id]);
       await db.query("INSERT INTO research_authors (research_id, author_id) VALUES ?", [authorResearchValues]);
     }
