@@ -133,7 +133,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const insertAuthors = async (researchId, authors) => {
       for (const { name, email } of authors) {
           // Check if the author already exists in the authors table based on name and email
-          let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND author_email = ?', [name, email]);
+          let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
   
           if (author.length === 0) {
               // Insert the new author with name and email
