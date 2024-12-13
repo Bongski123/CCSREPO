@@ -26,10 +26,10 @@ router.post('/request-pdf', async (req, res) => {
 
   // Query to fetch all authors' emails based on researchId
   const query = `
-    SELECT a.email 
-    FROM authors a
-    JOIN research_authors ra ON a.author_id = ra.author_id
-    WHERE ra.research_id = ?;
+      SELECT a.email 
+      FROM authors a
+      JOIN research_authors ra ON a.author_id = ra.author_id
+      WHERE ra.research_id = ?;
   `;
 
   try {

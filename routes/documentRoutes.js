@@ -126,33 +126,41 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     
     const researchId = result.insertId;
 
-    // Insert authors with their emails
     const insertAuthors = async (researchId, fullNames) => {
       const authorNames = fullNames.split(',').map(name => name.trim());
     
       for (const fullName of authorNames) {
-        const [first_name, last_name] = fullName.split(' '); // Assuming fullName is "first_name last_name"
-        
-        // Query to get email by first_name and last_name
-        const [users] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND last_name = ?', [first_name, last_name]);
-        
-        if (users.length === 0) {
-          console.log(`User with name ${first_name} ${last_name} not found in users table.`);
-          continue;  // Skip if no matching user is found
+        // Split the full name into parts
+        const nameParts = fullName.split(' ');
+        const first_name = nameParts[0];
+        const last_name = nameParts[nameParts.length - 1];
+        const middle_name = nameParts.length > 2 ? nameParts.slice(1, nameParts.length - 1).join(' ') : null; // Middle name is optional
+        const suffix = nameParts[nameParts.length - 1].includes('.') ? nameParts.pop() : null; // Check for suffix
+    
+        // Query to get user by first_name, middle_name, and last_name
+        const [users] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND middle_name = ? AND last_name = ?', [first_name, middle_name, last_name]);
+    
+        let email = null; // Default to null if email is not found
+        if (users.length > 0) {
+          email = users[0].email; // Extract the email if the user is found
+          console.log(`Found user email: ${email}`);
+        } else {
+          console.log(`User with name ${fullName} not found in users table. Proceeding without email.`);
         }
-    
-        // Make sure to extract the email here AFTER the query result is returned
-        const email = users[0].email;
-    
-        // Log the email to ensure it's being fetched correctly
-        console.log(`Found user email: ${email}`);
     
         // Check if author already exists in authors table
         let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [fullName, email]);
         if (author.length === 0) {
-          // Insert into authors table if the author doesn't exist yet
-          const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
-          author = { author_id: result.insertId };
+          // If the user wasn't found or the author doesn't exist in the authors table, insert the author with only the name
+          if (!email) {
+            console.log(`Inserting author with name ${fullName} without email.`);
+            const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [fullName]);
+            author = { author_id: result.insertId };
+          } else {
+            // If the email exists, insert the author with both name and email
+            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
+            author = { author_id: result.insertId };
+          }
         } else {
           author = author[0];
         }
@@ -162,8 +170,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
     
-
+    // Call the insertAuthors function
     await insertAuthors(researchId, authors);
+    
 
     // Insert categories
     const insertCategories = async (researchId, categories) => {
