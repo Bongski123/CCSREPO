@@ -119,18 +119,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Insert research with the file ID from Google Drive
-    const [insertResult] = await db.query(
-      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
-      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
-    );
-    const researchId = insertResult.insertId;  // Capture the researchId here
-
-    // Insert research with the file ID from Google Drive
     const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
       [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
     
+    const researchId = result.insertId;
     const insertAuthors = async (researchId, authors) => {
       const authorNames = authors.split(',').map(name => name.trim());
       for (const name of authorNames) {
@@ -144,8 +138,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
           await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
       }
   };
-  
-  
 
   await insertAuthors(researchId, authors);
 
@@ -210,20 +202,23 @@ router.delete('/delete-research/:research_id', async (req, res) => {
   await connection.beginTransaction();
 
   try {
-      // Deleting associated records
+      // Delete associated records first
       const queries = [
           'DELETE FROM research_categories WHERE research_id = ?',
           'DELETE FROM search_logs WHERE research_id = ?',
           'DELETE FROM collections WHERE research_id = ?',
-          'DELETE FROM notifications WHERE notification_id = ?',
+          'DELETE FROM notifications WHERE research_id = ?',
           'DELETE FROM research_keywords WHERE research_id = ?',
-          'DELETE FROM research_authors WHERE research_id = ?',
-          'DELETE FROM researches WHERE research_id = ?'
+          'DELETE FROM research_authors WHERE research_id = ?'
       ];
 
       for (const query of queries) {
           await connection.execute(query, [researchId]);
       }
+
+      // Now delete the main research record
+      const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
+      await connection.execute(deleteResearchQuery, [researchId]);
 
       // Commit the transaction
       await connection.commit();
