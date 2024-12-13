@@ -17,19 +17,19 @@ router.post('/request-pdf', async (req, res) => {
   const checkQuery = 'SELECT * FROM researches WHERE research_id = ?';
   try {
     const [research] = await db.query(checkQuery, [researchId]);
-    
+
     // If researchId doesn't exist, send an error response
     if (!research || research.length === 0) {
       return res.status(404).json({ error: 'No research found with the given ID' });
     }
 
-    // Insert the request into the pdf_requests table
+    // Insert the request into the pdf_requests table, including the research_id
     const insertQuery = `
       INSERT INTO pdf_requests (research_id, research_title, requester_name, requester_email, purpose, status)
       VALUES (?, ?, ?, ?, ?, 'pending');
     `;
 
-    // Use the researchId from the request body
+    // Use the researchId from the request body in the query
     await db.query(insertQuery, [researchId, researchTitle, requesterName, requesterEmail, purpose]);
 
     // Return success response
@@ -40,5 +40,6 @@ router.post('/request-pdf', async (req, res) => {
     return res.status(500).json({ error: 'Error processing PDF request' });
   }
 });
+
 
 module.exports = router;
