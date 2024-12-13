@@ -131,23 +131,31 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
     
-    const insertAuthors = async (researchId, authors) => {
-      const authorNames = authors.split(',').map(name => name.trim());
-      for (const name of authorNames) {
-          let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
-          if (author.length === 0) {
-              const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [name]);
-              author = { author_id: result.insertId };
-          } else {
-              author = author[0];
-          }
-          await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
-      }
-  };
+    // Insert authors with emails
+const insertAuthors = async (researchId, authors) => {
+  const authorDetails = authors.split(',').map(item => item.trim());
   
-  
+  for (const detail of authorDetails) {
+    // Split author and email (assuming email is included in the string in the format: "Name <email>")
+    const [authorName, authorEmail] = detail.split('<').map(part => part.trim());
+    
+    // Remove the closing '>' from the email address
+    const cleanEmail = authorEmail ? authorEmail.replace('>', '') : null;
 
-  await insertAuthors(researchId, authors);
+    let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [authorName, cleanEmail]);
+
+    if (author.length === 0) {
+      // Insert a new author with their name and email
+      const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [authorName, cleanEmail]);
+      author = { author_id: result.insertId };
+    } else {
+      author = author[0];
+    }
+
+    // Insert into research_authors
+    await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+  }
+};
 
   // Insert categories
   const insertCategories = async (researchId, categories) => {
