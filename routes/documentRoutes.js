@@ -130,16 +130,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       await db.query("INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)", [research_id, author_id]);
     }
 
-    // Insert category (assuming only one category per research now)
-const category = categories.trim(); // Assuming a single category
-const [categoryResult] = await db.query(
-  "INSERT INTO category (category_name) VALUES (?) ON DUPLICATE KEY UPDATE category_name = category_name",
-  [category]
-);
-const category_id = categoryResult.insertId;
-
-// Now associate the research with its category in the 'researches' table directly
-await db.query("UPDATE researches SET category_id = ? WHERE research_id = ?", [category_id, research_id]);
+    // Insert categories
+    for (const category of categories.split(",")) {
+      const [categoryResult] = await db.query(
+        "INSERT INTO category (category_name) VALUES (?) ON DUPLICATE KEY UPDATE category_name = category_name",
+        [category.trim()]
+      );
+      const category_id = categoryResult.insertId;
+      await db.query("INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)", [research_id, category_id]);
+    }
 
     // Insert keywords
     for (const keyword of keywords.split(",")) {
