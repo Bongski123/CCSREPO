@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: 'ncfresearchnexus@gmail.com',
-    pass: 'uvebkflhfwuwqcuk',
+    pass: 'apnrnhrzikfjshut',
   },
   debug: true, // Enable debug logging
 });
