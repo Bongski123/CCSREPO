@@ -93,7 +93,7 @@ router.post('/request-pdf', async (req, res) => {
     // Step 2: Insert the PDF request into the 'pdf_requests' table
     const [insertResult] = await db.query(
       'INSERT INTO pdf_requests (research_id,research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?,?)',
-      [researchTitle, requesterName, requesterEmail, purpose]
+      [researchId,researchTitle, requesterName, requesterEmail, purpose]
     );
 
     if (!insertResult.affectedRows) {
