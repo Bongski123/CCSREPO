@@ -137,7 +137,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   
           if (author.length === 0) {
               // Insert the new author with name and email
-              const [result] = await db.query('INSERT INTO authors (author_name, author_email) VALUES (?, ?)', [name, email]);
+              const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
               author = { author_id: result.insertId };
           } else {
               author = author[0];
