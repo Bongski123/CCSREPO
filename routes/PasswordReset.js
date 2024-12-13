@@ -11,11 +11,10 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true, // true for 465, false for other ports
   auth: {
-      user: 'ncfresearchnexus@gmail.com ', // Your Gmail address
+      user: 'ncfresearchnexus@gmail.com', // Your Gmail address
       pass: 'uvebkflhfwuwqcuk', // Your App Password (make sure to remove any spaces)
   },
 });
-
 
 // Endpoint to initiate password reset
 router.post('/request-password-reset', async (req, res) => {
@@ -110,7 +109,6 @@ router.post('/verify-code', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 
 module.exports = router;
