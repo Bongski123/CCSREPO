@@ -209,6 +209,36 @@ WHERE ra.research_id = ?
     }
   });
   
+  router.get('/authors/:author_id', async (req, res) => {
+    try {
+      const authorId = req.params.author_id;
+    
+      // Query to fetch the author name and email by author_id
+      const getAuthorQuery = `
+        SELECT author_name, email
+        FROM authors
+        WHERE author_id = ?
+      `;
+    
+      // Using db.promise() for async/await
+      const [rows] = await db.promise().execute(getAuthorQuery, [authorId]);
+    
+      // Check if rows is empty
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Author not found.' });
+      }
+    
+      // Log the fetched author data for debugging
+      console.log('Author fetched:', rows);
+    
+      // Respond with the author details
+      res.status(200).json(rows[0]);  // Return only the first row since author_id is unique
+    } catch (error) {
+      // More specific logging for debugging purposes
+      console.error('Error fetching author:', error.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
   
   
 
