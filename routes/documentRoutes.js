@@ -124,36 +124,18 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
     
-    const insertAuthors = async (researchId, authors, uploaderId) => {
-      // Get the email of the uploader by joining users and researches table based on uploader_id
-      const [user] = await db.query(
-          'SELECT u.email FROM users u JOIN researches r ON u.user_id = r.uploader_id WHERE r.research_id = ?',
-          [researchId]
-      );
-      const uploaderEmail = user.length > 0 ? user[0].email : null;
-  
-      if (!uploaderEmail) {
-          throw new Error('Uploader email not found.');
-      }
-  
+    const insertAuthors = async (researchId, authors) => {
       const authorNames = authors.split(',').map(name => name.trim());
       for (const name of authorNames) {
-          // Check if the author exists and retrieve or insert the author
           let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
           if (author.length === 0) {
-              // If author does not exist, insert the new author with the uploader's email
-              const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, uploaderEmail]);
+              const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [name]);
               author = { author_id: result.insertId };
           } else {
               author = author[0];
           }
-  
-          // Insert into research_authors table
           await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
       }
-  
-      // Optionally, you can update the researches table with the uploader_id if necessary
-      // await db.query('UPDATE researches SET uploader_id = ? WHERE research_id = ?', [uploaderId, researchId]);
   };
   
   
