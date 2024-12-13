@@ -132,9 +132,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     );
     const insertAuthors = async (researchId, authors) => {
       for (const { name, email } of authors) {
+          // Check if both name and email are valid
           if (!name || !email) {
               console.error('Author name or email is missing:', { name, email });
-              continue; // Skip invalid entries
+              continue; // Skip if either is missing
           }
   
           // Check if the author already exists in the authors table based on name and email
