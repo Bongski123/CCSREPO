@@ -118,9 +118,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Insert the new research record into the database
     const [result] = await db.query(
-      "INSERT INTO researches (title, abstract, filename, uploader_id, status) VALUES (?, ?, ?, ?, ?)",
-      [title, abstract, fileId, uploader_id, 'pending'] // Assuming 'pending' as the initial status
+      "INSERT INTO researches (title, abstract, filename, uploader_id, status, publish_date) VALUES (?, ?, ?, ?, ?, ?)",
+      [title, abstract, fileId, uploader_id, 'pending', new Date()] // `new Date()` will provide the current date and time
     );
+    
 
     const research_id = result.insertId;
 
