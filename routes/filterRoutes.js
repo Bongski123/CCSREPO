@@ -137,10 +137,12 @@ router.get('/authors', async (req, res) => {
     try {
         // SQL query to fetch authors with the count of researches they have published
         const query = `
-     SELECT 
+    SELECT 
     a.author_id,
+
     TRIM(BOTH '.' FROM a.author_name) AS authors_name,
-    COUNT(ra.research_id) AS documentCount
+    COUNT(ra.research_id) AS documentCount,
+        a.email
 FROM 
     authors a
 LEFT JOIN 

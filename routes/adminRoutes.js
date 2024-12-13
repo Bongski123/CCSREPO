@@ -140,6 +140,7 @@ router.get("/researches", async (req, res) => {
     const [researches] = await db.query(`SELECT r.research_id, r.title, r.publish_date, r.abstract, r.filename, r.status, 
              r.viewCount, r.downloadCount, r.citeCount,
              GROUP_CONCAT(a.author_name) AS authors
+              GROUP_CONCAT(a.emails) AS authors_emails
       FROM researches r
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
