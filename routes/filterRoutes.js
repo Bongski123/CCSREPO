@@ -103,41 +103,35 @@ router.get('/keywords/:keyword_id', async (req, res) => {
 });
 
 // Browse by authors
-// Browse by authors
-router.get('/authors/:research_id', async (req, res) => {
+router.get('/authors/:authorId', async (req, res) => {
     try {
-        const research_id = req.params.research_id;
+        const authorId = req.params.authorId;
 
-        if (!research_id) {
-            return res.status(400).json({ error: 'Please provide a valid research ID' });
+        // Validate authorId
+        if (!authorId) {
+            return res.status(400).json({ error: 'Please provide author ID' });
         }
 
-        // First query to get the authors associated with the given research_id
-        const getAuthorsQuery = `
-            SELECT a.author_id, a.author_name, a.email
-            FROM authors a
-            JOIN research_authors ra ON a.author_id = ra.author_id
-            WHERE ra.research_id = ?
-        `;
-        
-        // Execute the query to get authors linked to the research paper
-        const [authors] = await db.query(getAuthorsQuery, [research_id]);
+        // Query to get author ID and author name
+        const getAuthorQuery = 'SELECT author_id, author_name FROM authors WHERE author_id = ?';
+        const [author] = await db.query(getAuthorQuery, [authorId]);
 
-        // If no authors are found, return a 404
-        if (authors.length === 0) {
-            return res.status(404).json({ error: 'No authors found for this research' });
+        // Check if author exists
+        if (author.length === 0) {
+            return res.status(404).json({ error: 'Author not found!' });
         }
 
-        // Return the authors data in the response
-        res.status(200).json(authors);
+        // Respond with author details
+        res.json({
+            author: author[0], // Return only author_id and author_name
+        });
 
     } catch (error) {
-        console.error('Error fetching authors:', error.message);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error fetching author details:', error); // Log the error for debugging
+        res.status(500).json({ message: 'Failed to fetch author details', error: error.message });
     }
 });
 
-  
 // Endpoint to fetch authors based on query
 router.get('/authors', async (req, res) => {
     try {
@@ -183,39 +177,68 @@ ORDER BY
 
 // Assuming you have a separate route for authors
 router.get('/authors/:research_id', async (req, res) => {
-    const researchId = req.params.research_id;
-  
     try {
-      // Ensure the researchId is provided
-      if (!researchId) {
-        return res.status(400).json({ message: 'Research ID is required' });
-      }
-  
-      // Query to get the authors associated with the research paper
-      const getAuthorsQuery = `
-        SELECT a.author_name, a.email
-        FROM authors a
-        JOIN research_authors ra ON a.author_id = ra.author_id
-        WHERE ra.research_id = ?
-      `;
-  
-      // Execute the query
-      const [rows] = await db.promise().execute(getAuthorsQuery, [researchId]);
-  
-      // Check if no authors were found
-      if (rows.length === 0) {
-        return res.status(404).json({ message: 'No authors found for this research.' });
-      }
-  
-      // Respond with the authors
-      res.status(200).json(rows);
+        const research_id = req.params.research_id;
+
+        if (!research_id) {
+            return res.status(400).json({ error: 'Please provide a valid research ID' });
+        }
+
+        // First query to get the authors associated with the given research_id
+        const getAuthorsQuery = `
+            SELECT a.author_id, a.author_name, a.email
+            FROM authors a
+            JOIN research_authors ra ON a.author_id = ra.author_id
+            WHERE ra.research_id = ?
+        `;
+        
+        // Execute the query to get authors linked to the research paper
+        const [authors] = await db.query(getAuthorsQuery, [research_id]);
+
+        // If no authors are found, return a 404
+        if (authors.length === 0) {
+            return res.status(404).json({ error: 'No authors found for this research' });
+        }
+
+        // Return the authors data in the response
+        res.status(200).json(authors);
+
     } catch (error) {
-      // Log the error and send a response
-      console.error('Error fetching authors:', error.message);
+        console.error('Error fetching authors:', error.message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+  
+  router.get('/authors/:author_id', async (req, res) => {
+    try {
+      const authorId = req.params.author_id;
+    
+      // Query to fetch the author name and email by author_id
+      const getAuthorQuery = `
+        SELECT author_name, email
+        FROM authors
+        WHERE author_id = ?
+      `;
+    
+      // Using db.promise() for async/await
+      const [rows] = await db.promise().execute(getAuthorQuery, [authorId]);
+    
+      // Check if rows is empty
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Author not found.' });
+      }
+    
+      // Log the fetched author data for debugging
+      console.log('Author fetched:', rows);
+    
+      // Respond with the author details
+      res.status(200).json(rows[0]);  // Return only the first row since author_id is unique
+    } catch (error) {
+      // More specific logging for debugging purposes
+      console.error('Error fetching author:', error.message);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
-  
   
   
 
