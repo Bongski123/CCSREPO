@@ -139,18 +139,30 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // Insert authors into the authors table and associate with the research
     const insertAuthors = async (researchId, authors) => {
       for (const author of authors) {
-        const [name, email] = author.split(';');  // Assuming authors input is like 'Name;Email'
-
-        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
-        if (authorRecord.length === 0) {
-            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
-            authorRecord = { author_id: result.insertId };
-        } else {
-            authorRecord = authorRecord[0];
+        const [name, email] = author.split(';').map(val => val.trim());  // Make sure there’s no extra whitespace
+    
+        // Ensure both fields are not empty
+        if (!name || !email) {
+          continue; // Skip if either name or email is missing
         }
+    
+        // Check if the author already exists
+        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
+        
+        if (authorRecord.length === 0) {
+          // Author doesn't exist, insert into the authors table
+          const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
+          authorRecord = { author_id: result.insertId };
+        } else {
+          // Author exists, use the existing author_id
+          authorRecord = authorRecord[0];
+        }
+    
+        // Insert the research-author relationship
         await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, authorRecord.author_id]);
       }
     };
+    
 
     await insertAuthors(researchId, authorList);
 
