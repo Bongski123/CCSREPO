@@ -79,34 +79,30 @@ router.get('/research/:research_id', async (req, res) => {
 
     // SQL query to retrieve research details along with concatenated authors, keywords, and categories
     const getResearchQuery = `
-SELECT 
-    r.*,  
-    r.publish_date,  
-    GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
-    GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
-    GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories,
-    GROUP_CONCAT(DISTINCT a.email SEPARATOR ', ') AS author_emails  -- Get all emails of authors for the specific research_id
-FROM 
-    researches r
-LEFT JOIN 
-    research_authors ra ON r.research_id = ra.research_id
-LEFT JOIN 
-    authors a ON ra.author_id = a.author_id
-LEFT JOIN 
-    research_keywords rk ON r.research_id = rk.research_id  
-LEFT JOIN 
-    keywords k ON rk.keyword_id = k.keyword_id 
-LEFT JOIN 
-    research_categories rc ON r.research_id = rc.research_id
-LEFT JOIN 
-    category c ON rc.category_id = c.category_id 
-WHERE 
-    r.research_id = ? 
-GROUP BY 
-    r.research_id;
-
-
-
+      SELECT 
+          r.*,  
+          GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', ') AS authors,  
+          GROUP_CONCAT(DISTINCT IFNULL(a.email, 'No email provided') SEPARATOR ', ') AS author_emails,
+          GROUP_CONCAT(DISTINCT k.keyword_name SEPARATOR ', ') AS keywords,  
+          GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', ') AS categories
+      FROM 
+          researches r
+      LEFT JOIN 
+          research_authors ra ON r.research_id = ra.research_id
+      LEFT JOIN 
+          authors a ON ra.author_id = a.author_id
+      LEFT JOIN 
+          research_keywords rk ON r.research_id = rk.research_id  
+      LEFT JOIN 
+          keywords k ON rk.keyword_id = k.keyword_id 
+      LEFT JOIN 
+          research_categories rc ON r.research_id = rc.research_id
+      LEFT JOIN 
+          category c ON rc.category_id = c.category_id 
+      WHERE 
+          r.research_id = ? 
+      GROUP BY 
+          r.research_id;
     `;
 
     const [rows] = await db.query(getResearchQuery, [researchId]);
@@ -123,7 +119,7 @@ GROUP BY
       abstract: rows[0].abstract,
       status: rows[0].status || 'Not specified',
       authors: rows[0].authors || 'No authors available',
-      author_emails: rows[0].author_emails || 'No authors available',
+      author_emails: rows[0].author_emails || 'No emails available',
       keywords: rows[0].keywords || 'No keywords available',
       categories: rows[0].categories || 'No categories available'
     };
@@ -134,6 +130,7 @@ GROUP BY
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 
@@ -321,4 +318,6 @@ router.get('/daily/downloads', async (req, res) => {
   });
   
 
+
+  
 module.exports = router;

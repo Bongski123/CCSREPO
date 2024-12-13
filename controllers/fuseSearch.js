@@ -15,7 +15,9 @@ const fuseSearch = async (req, res) => {
     r.filename,
     GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name ASC SEPARATOR '\n') AS category,  -- Stack categories with a newline separator
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name ASC SEPARATOR '\n'), 'No authors') AS authors, 
+    COALESCE(GROUP_CONCAT(DISTINCT a.email ORDER BY a.email ASC SEPARATOR '\n'), 'No authors') AS authorsEmail, 
     COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name ASC SEPARATOR '\n'), 'No keywords') AS keywords
+    
 FROM 
     researches r
     LEFT JOIN research_authors ra ON r.research_id = ra.research_id
