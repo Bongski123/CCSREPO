@@ -119,6 +119,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Insert research with the file ID from Google Drive
+    const [insertResult] = await db.query(
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
+    );
+    const researchId = insertResult.insertId;  // Capture the researchId here
+
+    // Insert research with the file ID from Google Drive
     const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
       [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
