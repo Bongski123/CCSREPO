@@ -85,20 +85,20 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Split authors into an array of objects containing author_name and email
     const authorList = authors
-    ? authors.split(',').map(author => {
-        // Split by semicolon, checking that both parts exist before trimming
-        const authorParts = author.split(';');
-        if (authorParts.length !== 2) {
-          console.warn(`Invalid author format for: ${author}`);
-          return null; // or handle however you'd like
-        }
-        const [author_name, email] = authorParts;
-        return { 
-          author_name: author_name.trim(), 
-          email: email.trim()
-        };
-    }).filter(author => author !== null) // Remove any invalid entries
-    : [];
+  ? authors.split(',').map(author => {
+      // Match the format "name (email)"
+      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/); // Regex to capture name and email
+      if (!match) {
+        console.warn(`Invalid author format for: ${author}`);
+        return null; // or handle however you'd like
+      }
+      const [, author_name, email] = match;
+      return { 
+        author_name: author_name.trim(), 
+        email: email.trim()
+      };
+  }).filter(author => author !== null) // Remove any invalid entries
+  : [];
 
     const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
     const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
