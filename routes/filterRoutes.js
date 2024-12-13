@@ -182,10 +182,11 @@ router.get('/authors/:research_id', async (req, res) => {
   
       // Revised query to return the correct author names
       const getAuthorsQuery = `
-        SELECT a.author_name
-        FROM authors a
-        JOIN research_authors ra ON a.author_id = ra.author_id
-        WHERE ra.research_id = ?
+       SELECT a.author_name, a.email
+FROM authors a
+JOIN research_authors ra ON a.author_id = ra.author_id
+WHERE ra.research_id = ?
+;
       `;
   
       // Using `db.promise()` for async/await
