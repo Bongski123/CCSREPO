@@ -4,7 +4,7 @@ const db = require('../database/db');
 const router = express.Router();
 
 // POST /request-pdf endpoint
-router.post('/request-pdf', (req, res) => {
+router.post('/request-pdf-files', (req, res) => {
   const { researchId, requesterName, requesterEmail, purpose } = req.body;
 
   // Step 1: Fetch the research title based on researchId
