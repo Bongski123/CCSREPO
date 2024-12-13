@@ -1,118 +1,115 @@
-// Import required modules
+// Required modules
 const express = require('express');
 const nodemailer = require('nodemailer');
-const bcrypt = require('bcryptjs');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const EMAIL_USER = process.env.EMAIL_USER || "ncfresearchnexus@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS || "vkpiuxczvziqaqdl";
-require('dotenv').config();
-dotenv.config();
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const { pool } = require('./db'); // Import your MySQL connection pool
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-// Mock database for testing (Replace with a real database in production)
-const users = {}; // Example structure: { 'email@example.com': { password: 'hashedPassword', resetCode: '123456' } }
-
-// Configure nodemailer transporter
+// Create a Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  service: 'Gmail', // Use your preferred email service
   auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
+    user: 'ncfresearchnexus@gmail.com', // Replace with your email
+    pass: 'vkpiuxczvziqaqdl', // Replace with your email password or app password
   },
 });
 
-// Verify transporter configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('Transporter verification failed:', error);
-  } else {
-    console.log('Email transporter is ready to send emails.');
-  }
-});
-
-// Endpoint to send a password reset code
-app.post('/send-code', async (req, res) => {
+// Route to request a password reset
+app.post('/request-password-reset', async (req, res) => {
   const { email } = req.body;
 
-  console.log('Password reset request received for email:', email);
-
-  if (!users[email]) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
-  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-
   try {
+    // Check if the email exists in the database
+    const [user] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (!user.length) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+
+    // Generate a verification code
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+
+    // Store the code in the database with an expiry time (e.g., 15 minutes)
+    const expiryTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+    await pool.query(
+      'UPDATE users SET otp = ?, otp_expiry = ? WHERE email = ?',
+      [verificationCode, expiryTime, email]
+    );
+
+    // Send the verification code via email
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: 'your-email@gmail.com',
       to: email,
-      subject: 'Password Reset Code',
-      text: `Your verification code is ${resetCode}`,
+      subject: 'Password Reset Verification Code',
+      text: `Your verification code is: ${verificationCode}`,
     });
 
-    users[email].resetCode = resetCode;
-
-    console.log(`Reset code sent successfully to ${email}:`, resetCode);
-    res.status(200).json({ message: 'Verification code sent to your email!' });
+    res.json({ message: 'Verification code sent to your email' });
   } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Error sending email' });
+    console.error('Error sending verification code:', error);
+    res.status(500).json({ error: 'Failed to send verification code' });
   }
 });
 
-// Endpoint to verify the reset code and reset password
+// Route to verify the code
 app.post('/verify-code', async (req, res) => {
+  const { email, code } = req.body;
+
+  try {
+    const [user] = await pool.query('SELECT otp, otp_expiry FROM users WHERE email = ?', [email]);
+    if (!user.length) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+
+    const { otp, otp_expiry } = user[0];
+
+    // Check if the code is correct and not expired
+    if (otp !== code || new Date() > new Date(otp_expiry)) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+
+    res.json({ message: 'Verification code is valid' });
+  } catch (error) {
+    console.error('Error verifying code:', error);
+    res.status(500).json({ error: 'Failed to verify code' });
+  }
+});
+
+// Route to reset the password
+app.post('/reset-password', async (req, res) => {
   const { email, code, newPassword } = req.body;
 
-  console.log('Verification request received for email:', email);
-
-  if (!users[email] || users[email].resetCode !== code) {
-    return res.status(400).json({ error: 'Invalid verification code or email' });
-  }
-
   try {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    users[email].password = hashedPassword;
-    delete users[email].resetCode;
+    const [user] = await pool.query('SELECT otp, otp_expiry FROM users WHERE email = ?', [email]);
+    if (!user.length) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
 
-    console.log(`Password reset successfully for ${email}`);
-    res.status(200).json({ message: 'Password has been reset successfully!' });
+    const { otp, otp_expiry } = user[0];
+
+    // Check if the code is correct and not expired
+    if (otp !== code || new Date() > new Date(otp_expiry)) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password in the database
+    await pool.query('UPDATE users SET password = ?, otp = NULL, otp_expiry = NULL WHERE email = ?', [
+      hashedPassword,
+      email,
+    ]);
+
+    res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Error resetting password:', error);
-    res.status(500).json({ error: 'Error resetting password' });
-  }
-});
-
-// Mock user registration for testing purposes
-app.post('/register', async (req, res) => {
-  const { email, password } = req.body;
-
-  console.log('Registration request received for email:', email);
-
-  if (users[email]) {
-    return res.status(400).json({ error: 'User already exists' });
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    users[email] = { password: hashedPassword };
-
-    console.log(`User registered successfully: ${email}`);
-    res.status(201).json({ message: 'User registered successfully!' });
-  } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ error: 'Error registering user' });
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 10121;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
