@@ -157,6 +157,9 @@ const insertAuthors = async (researchId, authors) => {
   }
 };
 
+await insertAuthors(researchId, authors);
+
+
   // Insert categories
   const insertCategories = async (researchId, categories) => {
       const categoryNames = categories.split(',').map(name => name.trim());
