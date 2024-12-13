@@ -2,11 +2,13 @@ const express = require("express");
 const { google } = require("googleapis");
 const multer = require("multer");
 const { Readable } = require('stream');
+const fs = require("fs");
+const path = require("path");
 const db = require("../database/db");
 
 const router = express.Router();
 
-// Google Drive API setup using service account credentials
+// Google Drive API setup using service account credentials from environment variable or direct object
 const googleServiceAccount = {
   type: "service_account",
   project_id: "ccsrepository-444308",
@@ -37,14 +39,14 @@ T2RCfMIcZU1x3oOxF9D/R/pUVrF3OUfYiIRpn5dDLA7KkDug0UTU3OAwRirGhdXq
 r7sxDldYVAKHvwwGPwCnhPmi4zST1ZiZJl8Rv8vioQKBgQDOiy1z7ezJzgJSNoKz
 ee5zOWdsSRkxHBKRtc1vbBIxEg+z+838+TxXf2EJhkOA11OQptLGZ41iziR41P6A
 qZRp3lzXySc6REVOJI969AZSGovOFYPX6YguCb6X4wSuc/Avn+3AT/0bE6eMTAhX
-FgTYhJbE4mHJCmVUxn1C+iUleg==
------END PRIVATE KEY-----\n`,
+FgTYhJbE4mHJCmVUxn1C+iUleg==\n-----END PRIVATE KEY-----`,
   client_email: "ccsrepo@ccsrepository-444308.iam.gserviceaccount.com",
   client_id: "103197742225204345135",
   auth_uri: "https://accounts.google.com/o/oauth2/auth",
   token_uri: "https://oauth2.googleapis.com/token",
   auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
   client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ccsrepo%40ccsrepository-444308.iam.gserviceaccount.com",
+  universe_domain: "googleapis.com",
 };
 
 const auth = new google.auth.GoogleAuth({
@@ -68,7 +70,6 @@ const bufferToStream = (buffer) => {
   return readable;
 };
 
-// Upload route for research files
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file || req.file.mimetype !== "application/pdf") {
@@ -82,13 +83,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!categories) return res.status(400).json({ error: "Categories are required!" });
     if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
 
-    const authorList = authors ? authors.split(',').map(author_name => author_name.trim()) : [];
-    const categoryList = categories ? categories.split(',').map(author_name => author_name.trim()) : [];
-    const keywordList = keywords ? keywords.split(',').map(author_name => author_name.trim()) : [];
+    // Handle missing fields by defaulting to empty strings if undefined
+    const authorList = authors ? authors.split(',').map(name => name.trim()) : [];
+    const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
+    const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
 
     // Upload file to Google Drive
     const fileMetadata = {
-      name: req.file.originalname,
+      name: req.file.originalname, // Use the original file name
       parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
     };
     const media = {
@@ -109,6 +111,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Invalid uploader ID!" });
     }
 
+    // Check the roleId of the uploader
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
     if (uploader.length === 0) {
       return res.status(404).json({ error: "Uploader not found!" });
@@ -116,110 +119,125 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const role_id = uploader[0].role_id;
 
-    // Insert the new research record into the database
+    // Set the default status
+    let status = role_id === 1 ? "approved" : "pending";
+
+    // Check if title already exists
+    const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
+    if (existingDocument.length > 0) {
+      return res.status(409).json({ error: "Document with this title already exists!" });
+    }
+
+    // Insert research with the file ID from Google Drive
     const [result] = await db.query(
-      "INSERT INTO researches (title, abstract, filename, uploader_id, status, publish_date) VALUES (?, ?, ?, ?, ?, ?)",
-      [title, abstract, fileId, uploader_id, 'pending', new Date()] // `new Date()` will provide the current date and time
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
     
+    const researchId = result.insertId;
 
-    const research_id = result.insertId;
+    // Insert authors into the authors table and associate with the research
+    const insertAuthors = async (researchId, authors) => {
+      for (const author of authors) {
+        const [name, email] = author.split(';');  // Assuming authors input is like 'Name;Email'
 
-    // Add categories to research
-    if (categoryList.length > 0) {
-      const categoryIds = await Promise.all(categoryList.map(async (category) => {
-        const [categoryResult] = await db.query("SELECT category_id FROM categories WHERE category_name = ?", [category]);
-        return categoryResult.length > 0 ? categoryResult[0].category_id : null;
-      }));
-
-      const validCategoryIds = categoryIds.filter(id => id !== null);
-      if (validCategoryIds.length > 0) {
-        const categoryValues = validCategoryIds.map(category_id => [research_id, category_id]);
-        await db.query("INSERT INTO research_categories (research_id, category_id) VALUES ?", [categoryValues]);
-      }
-    }
-
-    // Add keywords to research
-    if (keywordList.length > 0) {
-      const keywordIds = await Promise.all(keywordList.map(async (keyword) => {
-        const [keywordResult] = await db.query("SELECT keyword_id FROM keywords WHERE keyword_name = ?", [keyword]);
-        return keywordResult.length > 0 ? keywordResult[0].keyword_id : null;
-      }));
-
-      const validKeywordIds = keywordIds.filter(id => id !== null);
-      if (validKeywordIds.length > 0) {
-        const keywordValues = validKeywordIds.map(keyword_id => [research_id, keyword_id]);
-        await db.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES ?", [keywordValues]);
-      }
-    }
-
-    // Add authors to research
-    if (authorList.length > 0) {
-      const authorValues = authorList.map(author => {
-        const [author_name, email] = author.split(';').map(str => str.trim());
-        return [author_name, email];
-      });
-
-      // Check if author already exists
-      for (let author of authorValues) {
-        const [existingAuthor] = await db.query("SELECT author_id FROM authors WHERE email = ?", [author[1]]);
-        if (existingAuthor.length === 0) {
-          await db.query("INSERT INTO authors (author_name, email) VALUES ?", [[author]]);
+        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [name, email]);
+        if (authorRecord.length === 0) {
+            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, email]);
+            authorRecord = { author_id: result.insertId };
+        } else {
+            authorRecord = authorRecord[0];
         }
+        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, authorRecord.author_id]);
       }
+    };
 
-      const [authorsRows] = await db.query(
-        "SELECT author_id FROM authors WHERE email IN (?)",
-        [authorList.map(author => author.split(';')[1].trim())]
-      );
+    await insertAuthors(researchId, authorList);
 
-      const authorResearchValues = authorsRows.map(row => [research_id, row.author_id]);
-      await db.query("INSERT INTO research_authors (research_id, author_id) VALUES ?", [authorResearchValues]);
-    }
+    // Insert categories
+    const insertCategories = async (researchId, categories) => {
+      for (const name of categories) {
+          let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
+          if (category.length === 0) {
+              const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
+              category = { category_id: result.insertId };
+          } else {
+              category = category[0];
+          }
+          await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
+      }
+    };
 
-    res.status(200).json({ message: "Research uploaded successfully!" });
+    await insertCategories(researchId, categoryList);
+
+    // Insert keywords
+    const insertKeywords = async (researchId, keywords) => {
+      for (const name of keywords) {
+          let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+          if (keyword.length === 0) {
+              const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+              keyword = { keyword_id: result.insertId };
+          } else {
+              keyword = keyword[0];
+          }
+          await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
+      }
+    };
+
+    await insertKeywords(researchId, keywordList);
+
+    res.status(201).json({ message: "Document Uploaded Successfully", fileId });
   } catch (error) {
-    console.error("Error uploading file:", error);
-    res.status(500).json({ error: "Failed to upload research file!" });
+    console.error("Error Upload Document:", error);
+    res.status(500).json({ error: "Upload Document Endpoint Error!" });
   }
 });
+
+
+
 
 // DELETE research and associated records
 router.delete('/delete-research/:research_id', async (req, res) => {
   const researchId = req.params.research_id;
 
   if (!researchId) {
-    return res.status(400).json({ message: 'Research ID is required.' });
+      return res.status(400).json({ message: 'Research ID is required.' });
   }
 
-  const connection = await db.getConnection();
+  // Start a transaction
+  const connection = await db.getConnection(); // Assuming you're using a connection pool
   await connection.beginTransaction();
 
   try {
-    const queries = [
-      'DELETE FROM research_categories WHERE research_id = ?',
-      'DELETE FROM search_logs WHERE research_id = ?',
-      'DELETE FROM collections WHERE research_id = ?',
-      'DELETE FROM notifications WHERE research_id = ?',
-      'DELETE FROM research_keywords WHERE research_id = ?',
-      'DELETE FROM research_authors WHERE research_id = ?'
-    ];
+      // Delete associated records first
+      const queries = [
+          'DELETE FROM research_categories WHERE research_id = ?',
+          'DELETE FROM search_logs WHERE research_id = ?',
+          'DELETE FROM collections WHERE research_id = ?',
+          'DELETE FROM notifications WHERE research_id = ?',
+          'DELETE FROM research_keywords WHERE research_id = ?',
+          'DELETE FROM research_authors WHERE research_id = ?'
+      ];
 
-    for (const query of queries) {
-      await connection.execute(query, [researchId]);
-    }
+      for (const query of queries) {
+          await connection.execute(query, [researchId]);
+      }
 
-    const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
-    await connection.execute(deleteResearchQuery, [researchId]);
+      // Now delete the main research record
+      const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
+      await connection.execute(deleteResearchQuery, [researchId]);
 
-    await connection.commit();
-    res.status(200).json({ message: 'Research and associated records deleted successfully.' });
+      // Commit the transaction
+      await connection.commit();
+      res.status(200).json({ message: 'Research and associated records deleted successfully.' });
   } catch (error) {
-    await connection.rollback();
-    console.error(error);
-    res.status(500).json({ message: 'An error occurred while deleting the research.' });
+      // Rollback the transaction in case of an error
+      await connection.rollback();
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred while deleting the research.' });
   } finally {
-    connection.release();
+      // Release the connection
+      connection.release();
   }
 });
 
