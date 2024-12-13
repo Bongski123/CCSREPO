@@ -124,89 +124,75 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
     
-    const researchId = result.insertId;
-
-    const insertAuthors = async (researchId, fullNames) => {
-      const authorNames = fullNames.split(',').map(name => name.trim());
-    
-      for (const fullName of authorNames) {
-        // Split the full name into parts
-        const nameParts = fullName.split(' ');
-        const first_name = nameParts[0];
-        const last_name = nameParts[nameParts.length - 1];
-        const middle_name = nameParts.length > 2 ? nameParts.slice(1, nameParts.length - 1).join(' ') : null; // Middle name is optional
-        const suffix = nameParts[nameParts.length - 1].includes('.') ? nameParts.pop() : null; // Check for suffix
-    
-        // Query to get user by first_name, middle_name, and last_name
-        const [users] = await db.query('SELECT user_id, email FROM users WHERE first_name = ? AND middle_name = ? AND last_name = ?', [first_name, middle_name, last_name]);
-    
-        let email = null; // Default to null if email is not found
-        if (users.length > 0) {
-          email = users[0].email; // Extract the email if the user is found
-          console.log(`Found user email: ${email}`);
-        } else {
-          console.log(`User with name ${fullName} not found in users table. Proceeding without email.`);
-        }
-    
-        // Check if author already exists in authors table
-        let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [fullName, email]);
-        if (author.length === 0) {
-          // If the user wasn't found or the author doesn't exist in the authors table, insert the author with only the name
-          if (!email) {
-            console.log(`Inserting author with name ${fullName} without email.`);
-            const [result] = await db.query('INSERT INTO authors (author_name) VALUES (?)', [fullName]);
-            author = { author_id: result.insertId };
-          } else {
-            // If the email exists, insert the author with both name and email
-            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [fullName, email]);
-            author = { author_id: result.insertId };
-          }
-        } else {
-          author = author[0];
-        }
-    
-        // Insert author into research_authors table
-        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+    const insertAuthors = async (researchId, authors, uploaderId) => {
+      // Get the email of the uploader by joining users and researches table based on uploader_id
+      const [user] = await db.query(
+          'SELECT u.email FROM users u JOIN researches r ON u.user_id = r.uploader_id WHERE r.research_id = ?',
+          [researchId]
+      );
+      const uploaderEmail = user.length > 0 ? user[0].email : null;
+  
+      if (!uploaderEmail) {
+          throw new Error('Uploader email not found.');
       }
-    };
-    
-    // Call the insertAuthors function
-    await insertAuthors(researchId, authors);
-    
+  
+      const authorNames = authors.split(',').map(name => name.trim());
+      for (const name of authorNames) {
+          // Check if the author exists and retrieve or insert the author
+          let [author] = await db.query('SELECT author_id FROM authors WHERE author_name = ?', [name]);
+          if (author.length === 0) {
+              // If author does not exist, insert the new author with the uploader's email
+              const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [name, uploaderEmail]);
+              author = { author_id: result.insertId };
+          } else {
+              author = author[0];
+          }
+  
+          // Insert into research_authors table
+          await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, author.author_id]);
+      }
+  
+      // Optionally, you can update the researches table with the uploader_id if necessary
+      // await db.query('UPDATE researches SET uploader_id = ? WHERE research_id = ?', [uploaderId, researchId]);
+  };
+  
+  
 
-    // Insert categories
-    const insertCategories = async (researchId, categories) => {
+  await insertAuthors(researchId, authors);
+
+  // Insert categories
+  const insertCategories = async (researchId, categories) => {
       const categoryNames = categories.split(',').map(name => name.trim());
       for (const name of categoryNames) {
-        let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
-        if (category.length === 0) {
-          const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
-          category = { category_id: result.insertId };
-        } else {
-          category = category[0];
-        }
-        await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
+          let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
+          if (category.length === 0) {
+              const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
+              category = { category_id: result.insertId };
+          } else {
+              category = category[0];
+          }
+          await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
       }
-    };
+  };
 
-    await insertCategories(researchId, categories);
+  await insertCategories(researchId, categories);
 
-    // Insert keywords
-    const insertKeywords = async (researchId, keywords) => {
+  // Insert keywords
+  const insertKeywords = async (researchId, keywords) => {
       const keywordNames = keywords.split(',').map(name => name.trim());
       for (const name of keywordNames) {
-        let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
-        if (keyword.length === 0) {
-          const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
-          keyword = { keyword_id: result.insertId };
-        } else {
-          keyword = keyword[0];
-        }
-        await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
+          let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+          if (keyword.length === 0) {
+              const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+              keyword = { keyword_id: result.insertId };
+          } else {
+              keyword = keyword[0];
+          }
+          await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
       }
-    };
+  };
 
-    await insertKeywords(researchId, keywords);
+  await insertKeywords(researchId, keywords);
 
     res.status(201).json({ message: "Document Uploaded Successfully", fileId });
   } catch (error) {
@@ -214,7 +200,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Upload Document Endpoint Error!" });
   }
 });
-
 
 
 
@@ -236,23 +221,20 @@ router.delete('/delete-research/:research_id', async (req, res) => {
   await connection.beginTransaction();
 
   try {
-      // Delete associated records first
+      // Deleting associated records
       const queries = [
           'DELETE FROM research_categories WHERE research_id = ?',
           'DELETE FROM search_logs WHERE research_id = ?',
           'DELETE FROM collections WHERE research_id = ?',
-          'DELETE FROM notifications WHERE research_id = ?',
+          'DELETE FROM notifications WHERE notification_id = ?',
           'DELETE FROM research_keywords WHERE research_id = ?',
-          'DELETE FROM research_authors WHERE research_id = ?'
+          'DELETE FROM research_authors WHERE research_id = ?',
+          'DELETE FROM researches WHERE research_id = ?'
       ];
 
       for (const query of queries) {
           await connection.execute(query, [researchId]);
       }
-
-      // Now delete the main research record
-      const deleteResearchQuery = 'DELETE FROM researches WHERE research_id = ?';
-      await connection.execute(deleteResearchQuery, [researchId]);
 
       // Commit the transaction
       await connection.commit();
