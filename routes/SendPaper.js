@@ -67,78 +67,82 @@ const transporter = nodemailer.createTransport({
 
 // API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
-    const researchID = req.params.research_id;
-    const { requester_email } = req.body; // Assume the request contains the recipient's email
-  
-    if (!requester_email) {
-      return res.status(400).send('Email is required');
-    }
-  
-    console.log(`Request to send email for research ID ${researchID} to ${requester_email}`);
-  
-    try {
-      // Retrieve the file_id from the database based on research ID
-      const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
-  
-      if (result.length > 0) {
-        const fileId = result[0].file_id;
-  
-        if (!fileId) {
-          return res.status(404).send('File ID is missing in the database');
-        }
-  
-        console.log(`File ID found: ${fileId}`);
-  
-        try {
-          // Fetch file metadata (e.g., name)
-          const metadataResponse = await drive.files.get({
-            fileId: fileId,
-            fields: 'name',
-          });
-  
-          const fileName = metadataResponse.data.name || 'document.pdf';
-          console.log(`File name: ${fileName}`);
-  
-          // Fetch file content
-          const driveResponse = await drive.files.get(
-            {
-              fileId: fileId,
-              alt: 'media',
-            },
-            { responseType: 'arraybuffer' }
-          );
-  
-          const fileBuffer = Buffer.from(driveResponse.data);
-  
-          // Send email with attachment
-          await transporter.sendMail({
-            from: 'Nodemailer', // Sender address
-            to: requester_email, // Recipient's email
-            subject: 'Requested Research Paper', // Subject line
-            text: 'Please find the requested research paper attached.', // Plain text body
-            attachments: [
-              {
-                filename: fileName,
-                content: fileBuffer,
-                contentType: 'application/pdf',
-              },
-            ],
-          });
-  
-          console.log('Email sent successfully');
-          res.send('Email sent successfully');
-        } catch (err) {
-          console.error('Error retrieving the file from Google Drive:', err.message);
-          res.status(500).send('Error retrieving the file from Google Drive');
-        }
-      } else {
-        console.log('Research not found');
-        res.status(404).send('Research not found');
+  const researchID = req.params.research_id;
+  const { requester_email } = req.body; // Assume the request contains the recipient's email
+
+  if (!requester_email) {
+    return res.status(400).send('Email is required');
+  }
+
+  console.log(`Request to send email for research ID ${researchID} to ${requester_email}`);
+
+  try {
+    // Retrieve the file_id from the database based on research ID
+    const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
+
+    if (result.length > 0) {
+      const fileId = result[0].file_id;
+
+      if (!fileId) {
+        return res.status(404).send('File ID is missing in the database');
       }
-    } catch (err) {
-      console.error('Error retrieving file:', err.message);
-      res.status(500).send('Internal Server Error');
+
+      console.log(`File ID found: ${fileId}`);
+
+      try {
+        // Fetch file metadata (e.g., name)
+        const metadataResponse = await drive.files.get({
+          fileId: fileId,
+          fields: 'name',
+        });
+
+        const fileName = metadataResponse.data.name || 'document.pdf';
+        console.log(`File name: ${fileName}`);
+
+        // Fetch file content
+        const driveResponse = await drive.files.get(
+          {
+            fileId: fileId,
+            alt: 'media',
+          },
+          { responseType: 'arraybuffer' }
+        );
+
+        const fileBuffer = Buffer.from(driveResponse.data);
+
+        // Send email with attachment
+        await transporter.sendMail({
+          from: 'Nodemailer', // Sender address
+          to: requester_email, // Recipient's email
+          subject: 'Requested Research Paper', // Subject line
+          text: 'Please find the requested research paper attached.', // Plain text body
+          attachments: [
+            {
+              filename: fileName,
+              content: fileBuffer,
+              contentType: 'application/pdf',
+            },
+          ],
+        });
+
+        console.log('Email sent successfully');
+
+        // Update the request status to "approved" in pdf_requests table
+        await db.query('UPDATE pdf_requests SET status = ? WHERE research_id = ?', ['approved', researchID]);
+
+        res.send('Email sent successfully and request approved');
+      } catch (err) {
+        console.error('Error retrieving the file from Google Drive:', err.message);
+        res.status(500).send('Error retrieving the file from Google Drive');
+      }
+    } else {
+      console.log('Research not found');
+      res.status(404).send('Research not found');
     }
-  });
+  } catch (err) {
+    console.error('Error retrieving file:', err.message);
+    res.status(500).send('Internal Server Error');
+  }
+});
   
   module.exports = router;
