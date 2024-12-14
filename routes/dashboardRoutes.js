@@ -161,6 +161,8 @@ router.get('/top-downloads', async (req, res) => {
     r.research_id,
     r.title, 
     r.abstract ,
+    r.status,
+    r.file_privacy,
     COALESCE(r.downloadCount, 0) AS downloadCount, 
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
     COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
@@ -175,7 +177,6 @@ LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
 GROUP BY r.research_id, r.title, r.downloadCount
 ORDER BY r.downloadCount DESC
 LIMIT 10;
-
     `;
 
     try {
@@ -197,6 +198,8 @@ router.get('/trending-searches',async (req, res) => {
     r.research_id,
     r.title, 
     r.abstract,
+    r.status,
+    r.file_privacy,
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name), 'Unknown') AS authors,
     COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
     COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name), 'No Keywords') AS keywords,
