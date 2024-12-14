@@ -160,7 +160,7 @@ router.get('/top-downloads', async (req, res) => {
       SELECT 
     r.research_id,
     r.title, 
-    r.abstract ,
+    r.abstract,
     r.status,
     r.file_privacy,
     COALESCE(r.downloadCount, 0) AS downloadCount, 
@@ -174,9 +174,11 @@ LEFT JOIN research_categories rc ON r.research_id = rc.research_id
 LEFT JOIN category c ON rc.category_id = c.category_id
 LEFT JOIN research_keywords rk ON r.research_id = rk.research_id
 LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
+WHERE r.status = 'approved' 
 GROUP BY r.research_id, r.title, r.downloadCount
 ORDER BY r.downloadCount DESC
 LIMIT 10;
+
     `;
 
     try {
@@ -194,7 +196,7 @@ LIMIT 10;
 router.get('/trending-searches',async (req, res) => {
     // SQL query to get the top 10 most searched papers
     const fetchQuery = `
-     SELECT 
+ SELECT 
     r.research_id,
     r.title, 
     r.abstract,
@@ -223,11 +225,14 @@ LEFT JOIN (
     GROUP BY 
         r.research_id
 ) sl ON r.research_id = sl.research_id
+WHERE 
+    r.status = 'approved'
 GROUP BY 
     r.research_id, r.title, r.abstract
 ORDER BY 
     searchCount DESC
 LIMIT 10;
+
 
     `;
   
