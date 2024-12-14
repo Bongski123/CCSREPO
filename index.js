@@ -57,7 +57,8 @@ const PasswordReset = require("./routes/PasswordReset");
 //updatefiles
 
 const Updatefiles=require("./routes/filesupdate");
-
+//send paper
+const SendPaper=require("./routes/SendPaper");
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
@@ -79,6 +80,8 @@ app.use(documentRoutes);
 app.use(adminRoutes);
 app.use(Updatefiles);
 app.use(privacyRoutes);
+app.use(SendPaper);
+
 
 // Browse Filter
 app.use(filterRoutes);
