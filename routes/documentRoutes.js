@@ -219,24 +219,28 @@ router.delete('/delete-research/:research_id', async (req, res) => {
   await connection.beginTransaction();
 
   try {
-      // Delete associated records first
+      // Delete associated records from additional tables
+      await connection.query("DELETE FROM search_logs WHERE research_id = ?", [researchId]);
+      await connection.query("DELETE FROM collections WHERE research_id = ?", [researchId]);
+      await connection.query("DELETE FROM notifications WHERE notification_id = ?", [researchId]);
+
+      // Delete records from existing tables
       await connection.query("DELETE FROM research_authors WHERE research_id = ?", [researchId]);
       await connection.query("DELETE FROM research_categories WHERE research_id = ?", [researchId]);
       await connection.query("DELETE FROM research_keywords WHERE research_id = ?", [researchId]);
-
-      // Delete the research
       await connection.query("DELETE FROM researches WHERE research_id = ?", [researchId]);
 
       // Commit the transaction
       await connection.commit();
-      res.status(200).json({ message: 'Research deleted successfully!' });
+      res.status(200).json({ message: 'Research and associated records deleted successfully!' });
   } catch (err) {
       await connection.rollback(); // Rollback if error occurs
       console.error(err);
-      res.status(500).json({ error: 'An error occurred while deleting the research' });
+      res.status(500).json({ error: 'An error occurred while deleting the research and associated records' });
   } finally {
       connection.release(); // Release the connection
   }
 });
+
 
 module.exports = router;
