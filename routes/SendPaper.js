@@ -68,13 +68,13 @@ const transporter = nodemailer.createTransport({
 // API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
     const researchID = req.params.research_id;
-    const { email } = req.body; // Assume the request contains the recipient's email
+    const { requester_email } = req.body; // Assume the request contains the recipient's email
   
-    if (!email) {
+    if (!requester_email) {
       return res.status(400).send('Email is required');
     }
   
-    console.log(`Request to send email for research ID ${researchID} to ${email}`);
+    console.log(`Request to send email for research ID ${researchID} to ${requester_email}`);
   
     try {
       // Retrieve the file_id from the database based on research ID
@@ -113,7 +113,7 @@ router.post('/send-pdf/:research_id', async (req, res) => {
           // Send email with attachment
           await transporter.sendMail({
             from: 'Nodemailer', // Sender address
-            to: email, // Recipient's email
+            to: requester_email, // Recipient's email
             subject: 'Requested Research Paper', // Subject line
             text: 'Please find the requested research paper attached.', // Plain text body
             attachments: [
