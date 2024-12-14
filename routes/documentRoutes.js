@@ -222,8 +222,8 @@ router.delete('/delete-research/:research_id', async (req, res) => {
       // Delete associated records from additional tables
       await connection.query("DELETE FROM search_logs WHERE research_id = ?", [researchId]);
       await connection.query("DELETE FROM collections WHERE research_id = ?", [researchId]);
-      await connection.query("DELETE FROM notifications WHERE notification_id = ?", [researchId]);
-
+      await connection.query("DELETE FROM notifications WHERE research_id = ?", [researchId]);
+      
       // Delete records from existing tables
       await connection.query("DELETE FROM research_authors WHERE research_id = ?", [researchId]);
       await connection.query("DELETE FROM research_categories WHERE research_id = ?", [researchId]);
