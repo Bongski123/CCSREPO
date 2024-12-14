@@ -39,6 +39,7 @@ const categoriesRoutes = require("./routes/categories");
 const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
+const pdfrequestretrieval = require("./routes/Pdf-request-retrieval");
 
 const Notification = require("./routes/UserDash");
 const pdfRequestRoutes = require("./routes/RequestPDFRoutes");
@@ -82,6 +83,7 @@ app.use(privacyRoutes);
 // Browse Filter
 app.use(filterRoutes);
 app.use(authorRoutes);
+app.use(pdfrequestretrieval);
 
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);
