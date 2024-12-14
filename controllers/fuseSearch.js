@@ -13,6 +13,7 @@ const fuseSearch = async (req, res) => {
     r.publish_date, 
     r.abstract, 
     r.filename,
+    r.file_privacy,
     GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name ASC SEPARATOR '\n') AS category,  -- Stack categories with a newline separator
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name ORDER BY a.author_name ASC SEPARATOR '\n'), 'No authors') AS authors, 
     COALESCE(GROUP_CONCAT(DISTINCT a.email ORDER BY a.email ASC SEPARATOR '\n'), 'No authors') AS authorsEmail, 
