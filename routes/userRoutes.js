@@ -4,13 +4,14 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const db = require('../database/db');
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
-
+const config = require('../authentication/config');
+const secretKey = config.secretKey;
 const router = express.Router();
 
 
 // Create a transporter object
 const sendVerificationEmail = (userEmail, userId) => {
-    const token = jwt.sign({ userId }, 'Nhel-secret-key'  );
+    const token = jwt.sign({ userId }, secretKey  );
     const verificationLink = `http://localhost:3000/verify-email?token=${token}`;
   
     const transporter = nodemailer.createTransport({
@@ -85,8 +86,8 @@ const sendVerificationEmail = (userEmail, userId) => {
 
         // Insert new user into the users table
         const insertUserQuery = `
-            INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, verified) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)  // Always set verified to 0
+            INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)  // Always set verified to 0
         `;
         const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
