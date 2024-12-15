@@ -8,10 +8,11 @@ router.get('/verify-email', (req, res) => {
   const { token } = req.query;  // Get the token from the query string
 
   if (!token) {
+    console.log('Token is missing');
     return res.status(400).json({ message: 'Token is required' });
   }
 
-  console.log('Received token:', token);  // Log token for debugging
+  console.log('Received token:', token);  // Log the token for debugging
 
   try {
     // Verify the token
@@ -43,6 +44,5 @@ router.get('/verify-email', (req, res) => {
     return res.status(500).json({ message: 'Error during email verification' });
   }
 });
-
 
 module.exports = router;
