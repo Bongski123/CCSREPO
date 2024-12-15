@@ -11,7 +11,7 @@ const router = express.Router();
 // Create a transporter object
 const sendVerificationEmail = (userEmail, userId) => {
     const token = jwt.sign({ userId }, 'Nhel-secret-key'  );
-    const verificationLink = `https://ccsrepo.onrender.com/verify-email?token=${token}`;
+    const verificationLink = `http://localhost:3000/verify-email?token=${token}`;
   
     const transporter = nodemailer.createTransport({
       service: 'gmail',
