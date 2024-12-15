@@ -42,7 +42,7 @@ const sendVerificationEmail = (userEmail, userId) => {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
         // Destructure the fields sent in the request body
-        const { first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name, verified } = req.body;
+        const { first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
 
         // Check for missing required fields, allowing password to be optional
         if (!first_name || !last_name || !email || !role_id || (!institution_id && !new_institution_name)) {
@@ -86,14 +86,16 @@ const sendVerificationEmail = (userEmail, userId) => {
         // Insert new user into the users table
         const insertUserQuery = `
             INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, verified) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)  // Always set verified to 0
         `;
-        const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId, verified || 0]);
+        const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
         const userId = insertResult.insertId;  // Get the userId from the inserted row
 
         // Send the verification email
         sendVerificationEmail(email, userId);
+
+        // Respond to the user with a success message
         res.status(201).json({ message: 'User Registered Successfully. Please verify your email.' });
 
     } catch (error) {
@@ -101,7 +103,6 @@ const sendVerificationEmail = (userEmail, userId) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 
 
 router.get('/users/all', async (req, res) => {
