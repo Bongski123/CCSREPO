@@ -96,8 +96,7 @@ const sendVerificationEmail = (userEmail, userId) => {
         // Send the verification email
         sendVerificationEmail(email, userId);
 
-        const token = generateVerificationToken(userId);  // Assuming you have a function to generate a token
-        res.status(201).json({ message: 'User Registered Successfully. Please verify your email.', token });
+        res.status(201).json({ message: 'User Registered Successfully. Please verify your email.'});
 
     } catch (error) {
         console.error('Error registering user:', error);
