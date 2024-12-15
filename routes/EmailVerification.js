@@ -1,10 +1,9 @@
-
 const express = require("express");
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');  // your database setup
 const router = express.Router();
 
-
+// Email verification endpoint
 router.get('/verify-email', async (req, res) => {
   const { token } = req.query;  // Get the token from the query string
 
@@ -17,7 +16,7 @@ router.get('/verify-email', async (req, res) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, 'Nhel-secret-key');  // Verify the token using the secret key
+    const decoded = jwt.verify(token, 'Nhel-secret-key',);  // No need for callback, use async/await
     const { userId } = decoded;
     console.log('Decoded user ID:', userId);  // Log decoded user ID for debugging
 
@@ -35,9 +34,8 @@ router.get('/verify-email', async (req, res) => {
 
   } catch (error) {
     console.error('Error during email verification:', error);  // Log unexpected errors
-    return res.status(400).json({ message: 'Invalid or expired token' });
+  
   }
 });
-
 
 module.exports = router;
