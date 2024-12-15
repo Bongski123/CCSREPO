@@ -24,6 +24,11 @@ router.post('/login', async (req, res) => {
 
         const user = rows[0];
 
+        // Check if the user is verified
+        if (user.verified !== 1) {
+            return res.status(403).json({ error: 'Account is not verified' });
+        }
+
         // Compare passwords
         const passwordMatch = await bcrypt.compare(password, user.password);
 
@@ -46,7 +51,7 @@ router.post('/login', async (req, res) => {
         );
 
         // Send token and userId as response
-        res.status(200).json({ token, userId: user.user_id ,    firstName: user.first_name,   lastName: user.last_name, });
+        res.status(200).json({ token, userId: user.user_id, firstName: user.first_name, lastName: user.last_name });
 
     } catch (error) {
         console.error('Error logging in user:', error);
