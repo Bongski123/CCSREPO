@@ -37,7 +37,6 @@ const sendVerificationEmail = (userEmail, userId) => {
       }
     });
   };
-
   router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
@@ -93,17 +92,18 @@ const sendVerificationEmail = (userEmail, userId) => {
 
         const userId = insertResult.insertId;  // Get the userId from the inserted row
 
-        // Send the verification email
-        sendVerificationEmail(email, userId);
+        // Create the verification token
+        const token = jwt.sign({ userId }, 'Nhel-secret-key', { expiresIn: '1h' });
+
+        // Send the verification email with the token
+        sendVerificationEmail(email, token);
 
         res.status(201).json({ message: 'User Registered Successfully. Please verify your email.'});
-
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 
 router.get('/users/all', async (req, res) => {
     try {
