@@ -34,7 +34,7 @@ router.get('/verify-email', async (req, res) => {
 
   } catch (error) {
     console.error('Error during email verification:', error);  // Log unexpected errors
-    return res.status(500).json({ message: 'Error during email verification' });
+  
   }
 });
 
