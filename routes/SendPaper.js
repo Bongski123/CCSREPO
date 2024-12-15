@@ -66,6 +66,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // API to send PDF via email
+// API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
   const researchID = req.params.research_id;
   const { requester_email } = req.body; // Assume the request contains the recipient's email
@@ -77,17 +78,26 @@ router.post('/send-pdf/:research_id', async (req, res) => {
   console.log(`Request to send email for research ID ${researchID} to ${requester_email}`);
 
   try {
-    // Retrieve the file_id from the database based on research ID
-    const [result] = await db.query('SELECT file_id FROM researches WHERE research_id = ?', [researchID]);
+    // Retrieve the file_id and authors' names from the database based on research ID
+    const [result] = await db.query(`
+      SELECT r.file_id, GROUP_CONCAT(a.author_name SEPARATOR ', ') AS authors
+      FROM researches r
+      LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+      LEFT JOIN authors a ON ra.author_id = a.author_id
+      WHERE r.research_id = ?
+      GROUP BY r.file_id
+    `, [researchID]);
 
     if (result.length > 0) {
       const fileId = result[0].file_id;
+      const authors = result[0].authors;
 
       if (!fileId) {
         return res.status(404).send('File ID is missing in the database');
       }
 
       console.log(`File ID found: ${fileId}`);
+      console.log(`Authors: ${authors}`);
 
       try {
         // Fetch file metadata (e.g., name)
@@ -115,7 +125,9 @@ router.post('/send-pdf/:research_id', async (req, res) => {
           from: 'Nodemailer', // Sender address
           to: requester_email, // Recipient's email
           subject: 'Requested Research Paper', // Subject line
-          text: 'Please find the requested research paper attached.', // Plain text body
+          text: `Please find the requested research paper attached.
+
+Authors: ${authors || 'Unknown'}`, // Plain text body with authors
           attachments: [
             {
               filename: fileName,
@@ -144,5 +156,6 @@ router.post('/send-pdf/:research_id', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
   
   module.exports = router;
