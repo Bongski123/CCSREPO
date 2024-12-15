@@ -21,7 +21,7 @@ router.get('/verify-email', async (req, res) => {
     console.log('Decoded user ID:', userId);  // Log decoded user ID for debugging
 
     // Update the user's verified status to 1 (true)
-    const query = 'UPDATE users SET verified = 1 WHERE user_id = ?';
+    const query = 'UPDATE users SET verification ="verified"   WHERE user_id = ?';
     const [result] = await db.query(query, [userId]);
 
     if (result.affectedRows === 0) {

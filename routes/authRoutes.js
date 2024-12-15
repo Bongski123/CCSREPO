@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
         const user = rows[0];
 
         // Check if the user is verified
-        if (user.verified !== 1) {
+        if (user.verificaiton !== verified) {
             return res.status(403).json({ error: 'Account is not verified' });
         }
 
@@ -37,21 +37,28 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // Create JWT token with 1 hour expiration
+        // Create JWT token with 1-hour expiration and include verified status
         const token = jwt.sign(
             {
                 userId: user.user_id,
                 email: user.email,
                 firstName: user.first_name,
                 lastName: user.last_name,
-                roleId: user.role_id
+                roleId: user.role_id,
+                verified: user.verificaiton
             },
             secretKey,
             { expiresIn: '1h' }
         );
 
-        // Send token and userId as response
-        res.status(200).json({ token, userId: user.user_id, firstName: user.first_name, lastName: user.last_name });
+        // Send token and user details as response
+        res.status(200).json({
+            token,
+            userId: user.user_id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            verified: user.verificaiton
+        });
 
     } catch (error) {
         console.error('Error logging in user:', error);
