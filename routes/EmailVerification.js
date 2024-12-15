@@ -4,8 +4,13 @@ const db = require('../database/db');  // your database setup
 const router = express.Router();
 // Email verification endpoint
 
-router.post('/verify-email', (req, res) => {
-  const { token } = req.body;
+// Change the POST route to GET for the /verify-email endpoint
+router.get('/verify-email', (req, res) => {
+  const { token } = req.query;  // Get the token from the query string
+
+  if (!token) {
+    return res.status(400).json({ message: 'Token is required' });
+  }
 
   try {
     // Verify the token
