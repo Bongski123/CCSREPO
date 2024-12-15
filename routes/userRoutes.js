@@ -87,7 +87,7 @@ const sendVerificationEmail = (userEmail, userId) => {
         // Insert new user into the users table
         const insertUserQuery = `
             INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)  // Always set verified to 0
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)  
         `;
         const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
