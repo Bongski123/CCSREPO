@@ -66,7 +66,6 @@ const transporter = nodemailer.createTransport({
 });
 
 // API to send PDF via email
-// API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
   const researchID = req.params.research_id;
   const { requester_email } = req.body; // Assume the request contains the recipient's email
@@ -78,18 +77,19 @@ router.post('/send-pdf/:research_id', async (req, res) => {
   console.log(`Request to send email for research ID ${researchID} to ${requester_email}`);
 
   try {
-    // Retrieve the file_id and authors' names from the database based on research ID
+    // Retrieve the file_id, title, and authors' names from the database based on research ID
     const [result] = await db.query(`
-      SELECT r.file_id, GROUP_CONCAT(a.author_name SEPARATOR ', ') AS authors
+      SELECT r.file_id, r.title, GROUP_CONCAT(a.author_name SEPARATOR ', ') AS authors
       FROM researches r
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
       WHERE r.research_id = ?
-      GROUP BY r.file_id
+      GROUP BY r.file_id, r.title
     `, [researchID]);
 
     if (result.length > 0) {
       const fileId = result[0].file_id;
+      const title = result[0].title;
       const authors = result[0].authors;
 
       if (!fileId) {
@@ -97,6 +97,7 @@ router.post('/send-pdf/:research_id', async (req, res) => {
       }
 
       console.log(`File ID found: ${fileId}`);
+      console.log(`Title: ${title}`);
       console.log(`Authors: ${authors}`);
 
       try {
@@ -125,9 +126,9 @@ router.post('/send-pdf/:research_id', async (req, res) => {
           from: 'Nodemailer', // Sender address
           to: requester_email, // Recipient's email
           subject: 'Requested Research Paper', // Subject line
-          text: `Please find the requested research paper attached.
+          text: `Please find the requested research paper titled "${title}" attached.
 
-Authors: ${authors || 'Unknown'}`, // Plain text body with authors
+Authors: ${authors || 'Unknown'}`, // Plain text body with title and authors
           attachments: [
             {
               filename: fileName,
@@ -156,6 +157,7 @@ Authors: ${authors || 'Unknown'}`, // Plain text body with authors
     res.status(500).send('Internal Server Error');
   }
 });
+
 
   
   module.exports = router;
