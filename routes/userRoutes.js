@@ -1,10 +1,49 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const db = require('../database/db');
 const { authenticateToken, isAdmin, isNCFUser, isNotNCFUser } = require('../authentication/middleware');
 
 const router = express.Router();
+
+
+// Create a transporter object
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for 465, false for other ports
+  auth: {
+      user: 'ncfresearchnexus@gmail.com', // Your Gmail address
+      pass: 'uvebkflhfwuwqcuk', // Your App Password (make sure to remove any spaces)
+  },
+});
+
+  
+  // Send the verification email after successful registration
+  const sendVerificationEmail = (userEmail, userId) => {
+    const token = jwt.sign({ userId }, 'Nhel-secret-key', { expiresIn: '1h' });
+  
+    const verificationLink = `https://ccsrepo.onrender.com/verify-email?token=${token}`;
+  
+    const mailOptions = {
+      from: 'ncfresearchnexus@gmail.com',
+      to: userEmail,
+      subject: 'Email Verification',
+      text: `Please verify your email by clicking the following link: ${verificationLink}`,
+    };
+  
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.log('Error sending email:', err);
+      } else {
+        console.log('Verification email sent:', info.response);
+      }
+    });
+  };
+  
+
+
 router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
@@ -53,7 +92,9 @@ router.post('/register', async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
+         
 
+        sendVerificationEmail(newUserEmail, userId);
         res.status(201).json({ message: 'User Registered Successfully' });
 
     } catch (error) {

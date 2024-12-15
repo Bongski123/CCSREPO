@@ -47,6 +47,7 @@ const InstitutionRoutes =require("./routes/InstitutionRoutes");
 //google login
 
 const googleRoutes=require("./routes/googleLogin");
+const EmailVerification=require("./routes/EmailVerification");
 
 const privacyRoutes = require('./routes/FilePrivacy'); // Path to the file with the above route
 
@@ -81,6 +82,7 @@ app.use(adminRoutes);
 app.use(Updatefiles);
 app.use(privacyRoutes);
 app.use(SendPaper);
+app.use(EmailVerification);
 
 
 // Browse Filter
