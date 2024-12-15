@@ -48,7 +48,7 @@ router.post('/login', async (req, res) => {
                 verification: user.verification
             },
             secretKey,
-            { expiresIn: '1h' }
+            { expiresIn: '1hour' }
         );
 
         // Send token and user details as response
