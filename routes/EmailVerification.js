@@ -47,7 +47,7 @@ router.get('/verify-email', async (req, res) => {
       return res.status(400).json({ message: 'Token expired. User deleted' });
     }
 
-    // Update the user's verification status to 'verified'
+    // If not expired, proceed with user verification
     const query = 'UPDATE users SET verification = "verified" WHERE user_id = ?';
     const [result] = await db.query(query, [userId]);
 
