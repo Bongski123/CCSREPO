@@ -96,14 +96,18 @@ const sendVerificationEmail = (userEmail, userId) => {
         // Send the verification email
         sendVerificationEmail(email, userId);
 
-        // Respond to the user with a success message
-        res.status(201).json({ message: 'User Registered Successfully. Please verify your email.' });
+        const token = jwt.sign({ userId: insertResult.insertId }, secretKey, { expiresIn: '1h' });  // Token expires in 1 hour
 
-    } catch (error) {
+        // Respond to the user with a success message
+        res.status(201).json({
+          message: 'User Registered Successfully. Please verify your email.',
+          token,  // Send token in the response
+        });
+      } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
-    }
-});
+      }
+    });
 
 
 router.get('/users/all', async (req, res) => {
