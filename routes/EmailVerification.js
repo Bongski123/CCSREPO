@@ -16,12 +16,26 @@ router.get('/verify-email', async (req, res) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, 'Nhel-secret-key',);  // No need for callback, use async/await
-    const { userId } = decoded;
+    const decoded = jwt.verify(token, 'Nhel-secret-key');
+    const { userId, createdAt } = decoded;  // assuming 'createdAt' is in the token
     console.log('Decoded user ID:', userId);  // Log decoded user ID for debugging
 
-    // Update the user's verified status to 1 (true)
-    const query = 'UPDATE users SET verification ="verified"   WHERE user_id = ?';
+    // Check if the token is older than 5 minutes
+    const currentTime = Date.now();
+    const tokenAge = currentTime - createdAt;
+
+    if (tokenAge > 5 * 60 * 1000) {  // 5 minutes in milliseconds
+      console.log('Token expired');
+      
+      // Delete the user from the database
+      const deleteUserQuery = 'DELETE FROM users WHERE user_id = ?';
+      await db.query(deleteUserQuery, [userId]);
+      
+      return res.status(400).json({ message: 'Token expired. User deleted' });
+    }
+
+    // Update the user's verification status to 'verified'
+    const query = 'UPDATE users SET verification = "verified" WHERE user_id = ?';
     const [result] = await db.query(query, [userId]);
 
     if (result.affectedRows === 0) {
@@ -34,7 +48,7 @@ router.get('/verify-email', async (req, res) => {
 
   } catch (error) {
     console.error('Error during email verification:', error);  // Log unexpected errors
-  
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
