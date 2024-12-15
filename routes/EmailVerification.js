@@ -1,4 +1,10 @@
-// Email verification route
+
+const express = require("express");
+const jwt = require('jsonwebtoken');
+const db = require('../database/db');  // your database setup
+const router = express.Router();
+
+
 router.get('/verify-email', async (req, res) => {
   const { token } = req.query;  // Get the token from the query string
 
@@ -32,3 +38,6 @@ router.get('/verify-email', async (req, res) => {
     return res.status(400).json({ message: 'Invalid or expired token' });
   }
 });
+
+
+module.exports = router;
