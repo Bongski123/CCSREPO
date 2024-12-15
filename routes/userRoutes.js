@@ -40,9 +40,7 @@ const transporter = nodemailer.createTransport({
         console.log('Verification email sent:', info.response);
       }
     });
-  };
-  
-
+};
 
 router.post('/register', async (req, res) => {
     try {
@@ -91,10 +89,12 @@ router.post('/register', async (req, res) => {
             INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
-         
+        const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
 
-        sendVerificationEmail(newUserEmail, userId);
+        const userId = insertResult.insertId;  // Get the userId from the inserted row
+
+        // Send the verification email
+        sendVerificationEmail(email, userId);
         res.status(201).json({ message: 'User Registered Successfully' });
 
     } catch (error) {
@@ -102,6 +102,8 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
+
+
 
 
 router.get('/users/all', async (req, res) => {
