@@ -9,22 +9,17 @@ const router = express.Router();
 
 
 // Create a transporter object
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-      user: 'ncfresearchnexus@gmail.com', // Your Gmail address
-      pass: 'uvebkflhfwuwqcuk', // Your App Password (make sure to remove any spaces)
-  },
-});
-
-  
-  // Send the verification email after successful registration
-  const sendVerificationEmail = (userEmail, userId) => {
+const sendVerificationEmail = (userEmail, userId) => {
     const token = jwt.sign({ userId }, 'Nhel-secret-key', { expiresIn: '1h' });
-  
     const verificationLink = `https://ccsrepo.onrender.com/verify-email?token=${token}`;
+  
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'ncfresearchnexus@gmail.com',
+        pass: 'uvebkflhfwuwqcuk', // Use environment variables for sensitive data
+      },
+    });
   
     const mailOptions = {
       from: 'ncfresearchnexus@gmail.com',
@@ -33,21 +28,21 @@ const transporter = nodemailer.createTransport({
       text: `Please verify your email by clicking the following link: ${verificationLink}`,
     };
   
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.log('Error sending email:', err);
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('Error sending email:', error);
       } else {
         console.log('Verification email sent:', info.response);
       }
     });
-};
+  };
 
-router.post('/register', async (req, res) => {
+  router.post('/register', async (req, res) => {
     try {
         console.log('Received request body:', req.body);  // Log the incoming request body for debugging
 
         // Destructure the fields sent in the request body
-        const { first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name } = req.body;
+        const { first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, new_institution_name, new_program_name, verified } = req.body;
 
         // Check for missing required fields, allowing password to be optional
         if (!first_name || !last_name || !email || !role_id || (!institution_id && !new_institution_name)) {
@@ -59,6 +54,10 @@ router.post('/register', async (req, res) => {
         const [existingUserByEmailRows] = await db.query(checkUserByEmailQuery, [email]);
 
         if (existingUserByEmailRows.length > 0) {
+            // If user is found and not verified, inform user to verify email
+            if (!existingUserByEmailRows[0].verified) {
+                return res.status(400).json({ error: 'Please verify your email first.' });
+            }
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
@@ -86,23 +85,22 @@ router.post('/register', async (req, res) => {
 
         // Insert new user into the users table
         const insertUserQuery = `
-            INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, middle_name, last_name, suffix, email, password, role_id, program_id, institution_id, verified) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId]);
+        const [insertResult] = await db.query(insertUserQuery, [first_name, middle_name || null, last_name, suffix || null, email, hashedPassword, role_id, finalProgramId, finalInstitutionId, verified || 0]);
 
         const userId = insertResult.insertId;  // Get the userId from the inserted row
 
         // Send the verification email
         sendVerificationEmail(email, userId);
-        res.status(201).json({ message: 'User Registered Successfully' });
+        res.status(201).json({ message: 'User Registered Successfully. Please verify your email.' });
 
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'User Registration Endpoint Error!' });
     }
 });
-
 
 
 
