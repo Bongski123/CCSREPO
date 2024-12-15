@@ -15,19 +15,19 @@ router.get('/verify-email', async (req, res) => {
   console.log('Received token:', token);  // Log the token for debugging
 
   try {
-    // Verify the token
+    // Verify the token and extract userId and createdAt (timestamp)
     const decoded = jwt.verify(token, 'Nhel-secret-key');
-    const { userId, createdAt } = decoded;  // assuming 'createdAt' is in the token
+    const { userId, createdAt } = decoded;
     console.log('Decoded user ID:', userId);  // Log decoded user ID for debugging
 
-    // Check if the token is older than 5 minutes
+    // Check if the token has expired (5 minutes)
     const currentTime = Date.now();
     const tokenAge = currentTime - createdAt;
 
     if (tokenAge > 5 * 60 * 1000) {  // 5 minutes in milliseconds
       console.log('Token expired');
       
-      // Delete the user from the database
+      // Delete the user from the database due to expired verification
       const deleteUserQuery = 'DELETE FROM users WHERE user_id = ?';
       await db.query(deleteUserQuery, [userId]);
       
