@@ -1,7 +1,9 @@
+const express = require("express");
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');  // your database setup
 const router = express.Router();
 // Email verification endpoint
+
 router.post('/verify-email', (req, res) => {
   const { token } = req.body;
 
