@@ -1,10 +1,7 @@
 const express = require("express");
 const jwt = require('jsonwebtoken');
-
 const db = require('../database/db');  // your database setup
 const router = express.Router();
-const config = require('../authentication/config');
-const secretKey = config.secretKey;
 
 // Email verification endpoint
 router.get('/verify-email', async (req, res) => {
@@ -19,7 +16,7 @@ router.get('/verify-email', async (req, res) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, secretKey);  // No need for callback, use async/await
+    const decoded = jwt.verify(token, 'Nhel-secret-key',);  // No need for callback, use async/await
     const { userId } = decoded;
     console.log('Decoded user ID:', userId);  // Log decoded user ID for debugging
 
