@@ -12,7 +12,7 @@ const router = express.Router();
 // Create a transporter object
 const sendVerificationEmail = (userEmail, userId) => {
     const token = jwt.sign({ userId }, secretKey  );
-    const verificationLink = `http://localhost:3000/verify-email?token=${token}`;
+    const verificationLink = `https://ccs-research-repository.vercel.app/verify-email?token=${token}`;
   
     const transporter = nodemailer.createTransport({
       service: 'gmail',
