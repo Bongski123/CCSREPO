@@ -39,7 +39,7 @@ router.post('/google-login', async (req, res) => {
                 email: user.email,
                 firstName: user.first_name,
                 middleName: user.middle_name,
-                Suffix: user.Suffix,
+                Suffix: user.suffix,
                 lastName: user.last_name,
                 roleId: user.role_id,
                 verification: user.verification,
