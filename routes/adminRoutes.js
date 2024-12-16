@@ -325,9 +325,10 @@ router.get('/daily/downloads', async (req, res) => {
     try {
       const result = await db.query(
         `SELECT u.user_id, COUNT(r.research_id) AS uploads
-         FROM users u
-         LEFT JOIN researches r ON u.user_id = r.uploader_id
-         GROUP BY u.user_id;`
+FROM users u
+LEFT JOIN researches r ON u.user_id = r.uploader_id
+GROUP BY u.user_id
+HAVING COUNT(r.research_id) > 0;`
       );
       res.json(result);
     } catch (error) {
