@@ -329,14 +329,20 @@ router.get('/daily/downloads', async (req, res) => {
         LEFT JOIN researches research ON u.user_id = research.uploader_id
         GROUP BY role.role_name;
       `);
-      
-      // Send the result as response
-      res.json(result);
+  
+      // Transform the result into a more readable format
+      const formattedResult = result.map(row => ({
+        role_name: row.role_name,
+        uploads: row.uploads || 0
+      }));
+  
+      // Send the formatted result as response
+      res.json(formattedResult);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Failed to retrieve uploader stats by role' });
     }
   });
-
+  
   
 module.exports = router;
