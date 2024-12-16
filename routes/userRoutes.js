@@ -178,54 +178,36 @@ router.get('/users/:user_id', async (req, res) => {
 
 // Update User Information
 router.put('/users/update/:userId', (req, res) => {
-  const startTime = Date.now(); // Log the time when the request is received
+  const userId = req.params.userId;
+  const { first_name, middle_name, last_name, suffix } = req.body;
 
-  try {
-    const userId = req.params.userId;
-    const { first_name, middle_name, last_name, suffix } = req.body;
+  // Validate required fields
+  if (!first_name || !last_name) {
+    return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
+  }
 
-    // Check if required fields are missing
-    if (!first_name || !last_name) {
-      return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
+  // Handle optional fields
+  const updatedMiddleName = middle_name || null;
+  const updatedSuffix = suffix || null;
+
+  const query = `
+    UPDATE users
+    SET first_name = ?, middle_name = ?, last_name = ?, suffix = ?
+    WHERE user_id = ?`;
+
+  db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error updating user data' });
     }
 
-    //
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    const query = 
-      `UPDATE users
-      SET 
-        first_name = ?, 
-        middle_name = ?, 
-        last_name = ?, 
-        suffix = ? 
-      WHERE user_id = ?`;
-
-    console.log('Query:', query); // Log the query for debugging
-
-    // Perform the update query with a timeout option
-    db.query(query, [first_name, middle_name, last_name, suffix, userId], { timeout: 10000 }, (err, result) => {
-      if (err) {
-        console.error('Error executing query:', err);
-        return res.status(500).json({ error: 'Error updating user data' });
-      }
-
-      // If no rows were affected, it means the user was not found
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Log the successful query execution time
-      const endTime = Date.now();
-      console.log('Query executed in:', endTime - startTime, 'ms');
-
-      // Respond with a success message
-      res.status(200).json({ message: 'User updated successfully' });
-    });
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    res.status(500).json({ error: 'An unexpected error occurred' });
-  }
+    res.status(200).json({ message: 'User updated successfully' });
+  });
 });
+
 
 
 // Delete User
