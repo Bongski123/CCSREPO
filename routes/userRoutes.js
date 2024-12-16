@@ -161,7 +161,7 @@ router.get('/users/:user_id', async (req, res) => {
           return res.status(400).json({ error: 'Please provide user id' });
       }
 
-      const getUserQuery = `SELECT user_id, email, first_name, middle_name, suffix,last_name, role_id, institution_id, program_id FROM users WHERE user_id = ?`;
+      const getUserQuery = `SELECT *  FROM users WHERE user_id = ?`;
       const [rows] = await db.query(getUserQuery, [userId]);
 
       if (rows.length === 0) {
@@ -191,15 +191,15 @@ router.put('/users/update/:userId', (req, res) => {
   const updatedSuffix = suffix || null;
 
   // Prepare the query
-  const query = `
-    UPDATE users
+  const query = 
+    `UPDATE users
     SET 
       first_name = ?, 
       middle_name = ?, 
       last_name = ?, 
       suffix = ?
     WHERE user_id = ?`;
-
+  
   // Perform the update query
   db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
     if (err) {
@@ -209,24 +209,7 @@ router.put('/users/update/:userId', (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // Generate new token with updated user data
-    const updatedUser = {
-      user_id: userId,
-      first_name,
-      middle_name: updatedMiddleName,
-      last_name,
-      suffix: updatedSuffix,
-    };
-
-    // Assuming you have a secret key for JWT
-    const token = jwt.sign(updatedUser, secretKey, { expiresIn: '1h' });
-
-    // Respond with the new token and success message
-    res.status(200).json({
-      message: 'User updated successfully',
-      token: token,  // Send the new token
-    });
+    res.status(200).json({ message: 'User updated successfully' });
   });
 });
 
