@@ -177,42 +177,44 @@ router.get('/users/:user_id', async (req, res) => {
 });
 
 // Update User Information
-router.put('/users/update/:userId', (req, res) => {
-  const userId = req.params.userId;
-  const { first_name, middle_name, last_name, suffix } = req.body;
-  
-  console.log(req.body); // Add this log to check the incoming data
+outer.put('/users/update/:userId', (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { first_name, middle_name, last_name, suffix } = req.body;
 
-  // Ensure that the request body contains the necessary fields
-  if (!first_name || !last_name) {
-    return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
+    if (!first_name || !last_name) {
+      return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
+    }
+
+    const updatedMiddleName = middle_name === undefined ? null : middle_name;
+    const updatedSuffix = suffix === undefined ? null : suffix;
+
+    const query = 
+      `UPDATE users
+      SET 
+        first_name = ?, 
+        middle_name = ?, 
+        last_name = ?, 
+        suffix = ? 
+      WHERE user_id = ?`;
+
+    db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
+      if (err) {
+        console.error('Error executing query:', err);
+        return res.status(500).json({ error: 'Error updating user data' });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'User updated successfully' });
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
-
-  const updatedMiddleName = middle_name === undefined ? null : middle_name;
-  const updatedSuffix = suffix === undefined ? null : suffix;
-
- const query = 
-  `UPDATE users
-  SET 
-    first_name = ?, 
-    middle_name = ?, 
-    last_name = ?, 
-    suffix = ? 
-  WHERE user_id = ?`;
-
-db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], { timeout: 10000 }, (err, result) => {
-  if (err) {
-    console.error('Error executing query:', err);
-    return res.status(500).json({ error: 'Error updating user data' });
-  }
-  if (result.affectedRows === 0) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  res.status(200).json({ message: 'User updated successfully' });
 });
-
-});
-
 
 // Delete User
 router.delete('/users/delete/:userId', async (req, res) => {
