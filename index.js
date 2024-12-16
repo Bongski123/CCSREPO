@@ -50,6 +50,7 @@ const googleRoutes=require("./routes/googleLogin");
 const EmailVerification=require("./routes/EmailVerification");
 
 const privacyRoutes = require('./routes/FilePrivacy'); // Path to the file with the above route
+const ProfilepicRetrieval = require('./routes/Content Filtering/ProfilePicRetrieval'); // Path to the file with the above route
 
 //reset password
 
@@ -89,7 +90,7 @@ app.use(EmailVerification);
 app.use(filterRoutes);
 app.use(authorRoutes);
 app.use(pdfrequestretrieval);
-
+app.use(ProfilepicRetrieval);
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);
 app.use(Notification);
