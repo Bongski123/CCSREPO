@@ -4,7 +4,7 @@ const multer = require("multer");
 const { Readable } = require('stream');
 const fs = require("fs");
 const path = require("path");
-const db = require("../database/db");
+const db = require("../../database/db");
 
 const router = express.Router();
 
