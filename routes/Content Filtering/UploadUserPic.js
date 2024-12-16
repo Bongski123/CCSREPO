@@ -78,9 +78,9 @@ router.post("/upload-profile-pic", upload.single("profile_pic"), async (req, res
         return res.status(400).json({ error: "Invalid file type, only JPG and PNG are allowed!" });
       }
   
-      const { user_id } = req.body;
+      const { userId } = req.body;
   
-      if (!user_id || isNaN(user_id)) {
+      if (!userId || isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID!" });
       }
   
@@ -103,12 +103,12 @@ router.post("/upload-profile-pic", upload.single("profile_pic"), async (req, res
       const fileId = driveResponse.data.id;
   
       // Update user profile with the file ID in the database
-      const [existingUser] = await db.query("SELECT user_id FROM users WHERE user_id = ?", [user_id]);
+      const [existingUser] = await db.query("SELECT user_id FROM users WHERE user_id = ?", [userId]);
       if (existingUser.length === 0) {
         return res.status(404).json({ error: "User not found!" });
       }
   
-      await db.query("UPDATE users SET profile_pic = ? WHERE user_id = ?", [fileId, user_id]);
+      await db.query("UPDATE users SET profile_pic = ? WHERE user_id = ?", [fileId, userId]);
   
       res.status(200).json({ message: "Profile picture uploaded successfully!" });
     } catch (err) {
