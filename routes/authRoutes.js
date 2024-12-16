@@ -43,6 +43,8 @@ router.post('/login', async (req, res) => {
                 userId: user.user_id,
                 email: user.email,
                 firstName: user.first_name,
+                middleName: user.middle_name,
+                Suffix: user.Suffix,
                 lastName: user.last_name,
                 roleId: user.role_id,
                 verification: user.verification

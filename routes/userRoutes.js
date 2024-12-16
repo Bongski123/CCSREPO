@@ -161,7 +161,7 @@ router.get('/users/:user_id', async (req, res) => {
           return res.status(400).json({ error: 'Please provide user id' });
       }
 
-      const getUserQuery = `SELECT user_id, email, first_name, last_name, role_id, institution_id, program_id FROM users WHERE user_id = ?`;
+      const getUserQuery = `SELECT user_id, email, first_name, middle_name, suffix,last_name, role_id, institution_id, program_id FROM users WHERE user_id = ?`;
       const [rows] = await db.query(getUserQuery, [userId]);
 
       if (rows.length === 0) {
@@ -179,10 +179,10 @@ router.get('/users/:user_id', async (req, res) => {
 // Update User Information
 router.put('/users/update/:userId', (req, res) => {
   const userId = req.params.userId;
-  const { first_name, middle_name, last_name, suffix, email, role_id, institution_id, program_id } = req.body;
+  const { first_name, middle_name, last_name, suffix } = req.body;
 
   // Ensure that the request body contains the necessary fields
-  if (!first_name || !last_name || !role_id || !institution_id || !program_id ) {
+  if (!first_name || !last_name   ) {
       return res.status(400).json({ message: 'Missing required fields' });
   }
 
@@ -194,11 +194,7 @@ router.put('/users/update/:userId', (req, res) => {
       middle_name = ?, 
       last_name = ?, 
       suffix = ?, 
-      email = ?, 
-      role_id = ?, 
-      institution_id = ?, 
-      program_id = ?
-    WHERE user_id = ?`;
+      WHERE user_id = ?`;
 
   // Perform the update query
   db.query(query, [first_name, middle_name, last_name, suffix, email, role_id, institution_id, program_id, userId], (err, result) => {

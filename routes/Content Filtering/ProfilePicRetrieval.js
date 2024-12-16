@@ -105,4 +105,31 @@ router.get('/profile-picture/:user_id', async (req, res) => {
     }
 });
 
+
+
+const getUserProfilePic = async (req, res) => {
+  const { userId } = req.query; // Get the user ID from the query parameters
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    // Query the database to fetch the profile picture URL for the user
+    const result = await db.query('SELECT profile_pic FROM users WHERE id = ?', [userId]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const profilePicUrl = result[0].profile_pic;
+
+    // If the user has a profile picture, send its URL, otherwise send a default image URL
+    res.json({ profilePicUrl: profilePicUrl || '/uploads/default-avatar.png' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to retrieve profile picture' });
+  }
+};
+
 module.exports = router;
