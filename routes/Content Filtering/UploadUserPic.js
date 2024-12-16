@@ -108,7 +108,7 @@ router.post("/upload-profile-pic", upload.single("profile_pic"), async (req, res
         return res.status(404).json({ error: "User not found!" });
       }
   
-      await db.query("UPDATE users SET profile_pic = ? WHERE user_id = ?", [fileId, userId]);
+      await db.query("UPDATE users SET profile_picture = ? WHERE user_id = ?", [fileId, userId]);
   
       res.status(200).json({ message: "Profile picture uploaded successfully!" });
     } catch (err) {
