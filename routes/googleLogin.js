@@ -35,11 +35,14 @@ router.post('/google-login', async (req, res) => {
       // User exists, generate JWT token and include user_id
       const accessToken = jwt.sign(
         { 
-          userId: user.user_id, // Include user_id in the token
-          firstName: user.first_name, 
-          lastName: user.last_name,
-          email: user.email, 
-          roleId: user.role_id, 
+          userId: user.user_id,
+                email: user.email,
+                firstName: user.first_name,
+                middleName: user.middle_name,
+                Suffix: user.Suffix,
+                lastName: user.last_name,
+                roleId: user.role_id,
+                verification: user.verification,
           picture: user.profile_picture || picture 
         },
         JWT_SECRET,
