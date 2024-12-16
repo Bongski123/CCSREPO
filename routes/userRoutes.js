@@ -222,4 +222,37 @@ router.get('/programs/all', async (req, res) => {
     }
 });
 
+
+
+// Update User Information
+router.put('/users/update/:userId', async (req, res) => {
+  const { first_name, middle_name, last_name, suffix } = req.body;
+  const userId = req.params.userId;
+  
+  console.log('Received PUT request with userId:', userId);  // Log to ensure request is being received
+  
+  const query = `
+    UPDATE users
+    SET first_name = ?, middle_name = ?, last_name = ?, suffix = ?
+    WHERE user_id = ?;
+  `;
+
+  try {
+    const [result] = await db.query(query, [first_name, middle_name, last_name, suffix, userId]);
+
+    console.log('Query result:', result);  // Check the result from DB
+
+    if (result.affectedRows > 0) {
+      console.log('User info updated successfully');
+      return res.status(200).json({ message: 'User info updated successfully' });
+    } else {
+      console.log('User not found or no changes made');
+      return res.status(400).json({ message: 'User not found or no changes made' });
+    }
+  } catch (err) {
+    console.error('Error updating user info:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
