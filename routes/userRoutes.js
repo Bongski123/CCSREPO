@@ -195,7 +195,7 @@ router.put('/users/update/:userId', (req, res) => {
       return res.status(500).send('Internal server error');
     }
 
-    console.log('Query result:', result);  // Log the result to see if anything is returned from DB
+    console.log('Query result:', result);  // Check the result from DB
 
     if (result.affectedRows > 0) {
       console.log('User info updated successfully');
@@ -206,7 +206,6 @@ router.put('/users/update/:userId', (req, res) => {
     }
   });
 });
-
 
 // Delete User
 router.delete('/users/delete/:userId', async (req, res) => {
