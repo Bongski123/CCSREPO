@@ -320,5 +320,22 @@ router.get('/daily/downloads', async (req, res) => {
   
 
 
+
+  router.get('/admin/uploader-stats', async (req, res) => {
+    try {
+      const result = await db.query(
+        `SELECT u.user_id, COUNT(r.research_id) AS uploads
+         FROM users u
+         LEFT JOIN researches r ON u.user_id = r.uploader_id
+         GROUP BY u.user_id;`
+      );
+      res.json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to retrieve uploader stats' });
+    }
+  });
+
+
   
 module.exports = router;
