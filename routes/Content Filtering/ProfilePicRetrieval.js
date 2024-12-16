@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const db = require('../database/db'); // Adjust the path as necessary
+const db = require('../../database/db'); // Adjust the path as necessary
 const { google } = require('googleapis');
 
 const router = express.Router();
