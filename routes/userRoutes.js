@@ -191,25 +191,26 @@ router.put('/users/update/:userId', (req, res) => {
   const updatedMiddleName = middle_name === undefined ? null : middle_name;
   const updatedSuffix = suffix === undefined ? null : suffix;
 
-  const query = 
-    `UPDATE users
-    SET 
-      first_name = ?, 
-      middle_name = ?, 
-      last_name = ?, 
-      suffix = ? 
-    WHERE user_id = ?`;
+ const query = 
+  `UPDATE users
+  SET 
+    first_name = ?, 
+    middle_name = ?, 
+    last_name = ?, 
+    suffix = ? 
+  WHERE user_id = ?`;
 
-  db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Error updating user data' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.status(200).json({ message: 'User updated successfully' });
-  });
+db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], { timeout: 10000 }, (err, result) => {
+  if (err) {
+    console.error('Error executing query:', err);
+    return res.status(500).json({ error: 'Error updating user data' });
+  }
+  if (result.affectedRows === 0) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.status(200).json({ message: 'User updated successfully' });
+});
+
 });
 
 
