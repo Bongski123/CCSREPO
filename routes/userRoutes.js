@@ -187,8 +187,8 @@ router.put('/users/update/:userId', (req, res) => {
   }
 
   // If middle_name or suffix are not provided, set them to null
-  const updatedMiddleName = middle_name || null;
-  const updatedSuffix = suffix || null;
+  const updatedMiddleName = middle_name === undefined ? null : middle_name;
+  const updatedSuffix = suffix === undefined ? null : suffix;
 
   // Prepare the query
   const query = 
@@ -204,10 +204,10 @@ router.put('/users/update/:userId', (req, res) => {
   db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Error updating user data' });
+      return res.status(500).json({ error: 'Error updating user data' });
     }
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     res.status(200).json({ message: 'User updated successfully' });
   });
