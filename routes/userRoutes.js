@@ -178,13 +178,18 @@ router.get('/users/:user_id', async (req, res) => {
 
 // Update User Information
 router.put('/users/update/:userId', (req, res) => {
+  console.log('Request received');  // Add a log here to see if the request is coming in.
+  
   const userId = req.params.userId;
   const { first_name, middle_name, last_name, suffix } = req.body;
 
-  // Validate required fields
   if (!first_name || !last_name) {
+    console.log('Missing required fields');  // Log missing fields
     return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
   }
+
+  // Ensure no blocking logic occurs here and log the userId
+  console.log('User ID:', userId);
 
   // Handle optional fields
   const updatedMiddleName = middle_name || null;
@@ -197,16 +202,16 @@ router.put('/users/update/:userId', (req, res) => {
 
   db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
     if (err) {
-      console.error('Database Error:', err);  // Log error
+      console.error('Database Error:', err);
       return res.status(500).json({ error: 'Error updating user data' });
     }
 
     if (result.affectedRows === 0) {
-      console.log('User not found');  // Log if no rows were affected
+      console.log('User not found');
       return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log('User updated successfully');  // Log successful update
+    console.log('User updated successfully');
     res.status(200).json({ message: 'User updated successfully' });
   });
 });
