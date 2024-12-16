@@ -187,8 +187,8 @@ router.put('/users/update/:userId', (req, res) => {
   }
 
   // If middle_name or suffix are not provided, set them to null
-  const updatedMiddleName = middle_name ? middle_name : null;
-  const updatedSuffix = suffix ? suffix : null;
+  const updatedMiddleName = middle_name || null;
+  const updatedSuffix = suffix || null;
 
   // Prepare the query
   const query = `
@@ -206,17 +206,29 @@ router.put('/users/update/:userId', (req, res) => {
       console.error(err);
       return res.status(500).json({ message: 'Error updating user data' });
     }
-
-    // Check if the update affected any rows
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Return success response
-    return res.status(200).json({ message: 'User updated successfully' });
+    // Generate new token with updated user data
+    const updatedUser = {
+      user_id: userId,
+      first_name,
+      middle_name: updatedMiddleName,
+      last_name,
+      suffix: updatedSuffix,
+    };
+
+    // Assuming you have a secret key for JWT
+    const token = jwt.sign(updatedUser, secretKey, { expiresIn: '1h' });
+
+    // Respond with the new token and success message
+    res.status(200).json({
+      message: 'User updated successfully',
+      token: token,  // Send the new token
+    });
   });
 });
-
 
 // Delete User
 router.delete('/users/delete/:userId', async (req, res) => {
