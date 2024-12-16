@@ -330,10 +330,9 @@ router.get('/daily/downloads', async (req, res) => {
         GROUP BY role.role_name;
       `);
   
-      // Transform the result into a more readable format
+      // Transform the result into an object where each key is the role_name and the value is the upload count
       const formattedResult = result.map(row => ({
-        role_name: row.role_name,
-        uploads: row.uploads || 0
+        [row.role_name]: row.uploads || 0
       }));
   
       // Send the formatted result as response
