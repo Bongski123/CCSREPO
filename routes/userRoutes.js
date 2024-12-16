@@ -180,12 +180,7 @@ router.get('/users/:user_id', async (req, res) => {
 router.put('/users/update/:userId', (req, res) => {
   const { first_name, middle_name, last_name, suffix } = req.body;
   const userId = req.params.userId;
-  
-  // Validate that user ID in URL matches the logged-in user ID
-  if (req.user.user_id !== parseInt(userId)) {
-    return res.status(403).send('Unauthorized');
-  }
-
+ 
   // Update query
   const query = `
     UPDATE users
