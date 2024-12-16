@@ -190,7 +190,7 @@ router.put('/users/update/:userId', (req, res) => {
   const query = `
     UPDATE users
     SET first_name = ?, middle_name = ?, last_name = ?, suffix = ?
-    WHERE id = ?;
+    WHERE user_id = ?;
   `;
   
   db.query(query, [first_name, middle_name, last_name, suffix, userId], (err, result) => {
