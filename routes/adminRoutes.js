@@ -320,23 +320,23 @@ router.get('/daily/downloads', async (req, res) => {
   
 
 
-
-  router.get('/admin/uploader-stats', async (req, res) => {
+  router.get('/admin/uploader-stats-by-role', async (req, res) => {
     try {
-      const result = await db.query(
-        `SELECT u.user_id, COUNT(r.research_id) AS uploads
-FROM users u
-LEFT JOIN researches r ON u.user_id = r.uploader_id
-GROUP BY u.user_id
-HAVING COUNT(r.research_id) > 0;`
-      );
+      const result = await db.query(`
+        SELECT role.role_name, COUNT(research.research_id) AS uploads
+        FROM users u
+        JOIN roles role ON u.role_id = role.role_id
+        LEFT JOIN researches research ON u.user_id = research.uploader_id
+        GROUP BY role.role_name;
+      `);
+      
+      // Send the result as response
       res.json(result);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: 'Failed to retrieve uploader stats' });
+      res.status(500).json({ error: 'Failed to retrieve uploader stats by role' });
     }
   });
-
 
   
 module.exports = router;
