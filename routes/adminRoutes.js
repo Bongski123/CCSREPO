@@ -322,7 +322,7 @@ router.get('/daily/downloads', async (req, res) => {
 
   router.get('/admin/uploader-stats-by-role', async (req, res) => {
     try {
-      const result = await db.query(`
+      const results = await db.query(`
         SELECT role.role_name, COUNT(research.research_id) AS uploads
         FROM users u
         JOIN roles role ON u.role_id = role.role_id
@@ -330,16 +330,10 @@ router.get('/daily/downloads', async (req, res) => {
         GROUP BY role.role_name;
       `);
   
-      // Transform the result into an object where each key is the role_name and the value is the upload count
-      const formattedResult = result.map(row => ({
-        [row.role_name]: row.uploads || 0
-      }));
-  
-      // Send the formatted result as response
-      res.json(formattedResult);
+      res.json(results);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to retrieve uploader stats by role' });
+      console.error('Error fetching daily citations:', error);
+      res.status(500).send('Server error');
     }
   });
   
