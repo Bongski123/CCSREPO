@@ -180,8 +180,9 @@ router.get('/users/:user_id', async (req, res) => {
 router.put('/users/update/:userId', (req, res) => {
   const { first_name, middle_name, last_name, suffix } = req.body;
   const userId = req.params.userId;
- 
-  // Update query
+  
+  console.log('Received PUT request with userId:', userId);  // Log to ensure request is being received
+  
   const query = `
     UPDATE users
     SET first_name = ?, middle_name = ?, last_name = ?, suffix = ?
@@ -194,9 +195,13 @@ router.put('/users/update/:userId', (req, res) => {
       return res.status(500).send('Internal server error');
     }
 
+    console.log('Query result:', result);  // Log the result to see if anything is returned from DB
+
     if (result.affectedRows > 0) {
+      console.log('User info updated successfully');
       return res.status(200).send({ message: 'User info updated successfully' });
     } else {
+      console.log('User not found or no changes made');
       return res.status(400).send({ message: 'User not found or no changes made' });
     }
   });
