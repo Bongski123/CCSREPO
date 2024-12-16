@@ -180,27 +180,26 @@ router.get('/users/:user_id', async (req, res) => {
 router.put('/users/update/:userId', (req, res) => {
   const userId = req.params.userId;
   const { first_name, middle_name, last_name, suffix } = req.body;
+  
+  console.log(req.body); // Add this log to check the incoming data
 
   // Ensure that the request body contains the necessary fields
   if (!first_name || !last_name) {
     return res.status(400).json({ message: 'Missing required fields: first_name or last_name' });
   }
 
-  // If middle_name or suffix are not provided, set them to null
   const updatedMiddleName = middle_name === undefined ? null : middle_name;
   const updatedSuffix = suffix === undefined ? null : suffix;
 
-  // Prepare the query
   const query = 
     `UPDATE users
     SET 
       first_name = ?, 
       middle_name = ?, 
       last_name = ?, 
-      suffix = ?
+      suffix = ? 
     WHERE user_id = ?`;
-  
-  // Perform the update query
+
   db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
     if (err) {
       console.error(err);
@@ -212,6 +211,7 @@ router.put('/users/update/:userId', (req, res) => {
     res.status(200).json({ message: 'User updated successfully' });
   });
 });
+
 
 // Delete User
 router.delete('/users/delete/:userId', async (req, res) => {
