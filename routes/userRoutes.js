@@ -197,13 +197,16 @@ router.put('/users/update/:userId', (req, res) => {
 
   db.query(query, [first_name, updatedMiddleName, last_name, updatedSuffix, userId], (err, result) => {
     if (err) {
+      console.error('Database Error:', err);  // Log error
       return res.status(500).json({ error: 'Error updating user data' });
     }
 
     if (result.affectedRows === 0) {
+      console.log('User not found');  // Log if no rows were affected
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log('User updated successfully');  // Log successful update
     res.status(200).json({ message: 'User updated successfully' });
   });
 });
