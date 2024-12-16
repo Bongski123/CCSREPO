@@ -182,7 +182,7 @@ router.put('/users/update/:userId', (req, res) => {
   const userId = req.params.userId;
   
   // Validate that user ID in URL matches the logged-in user ID
-  if (req.user.id !== parseInt(userId)) {
+  if (req.user.user_id !== parseInt(userId)) {
     return res.status(403).send('Unauthorized');
   }
 
