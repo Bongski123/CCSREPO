@@ -39,8 +39,8 @@ const categoriesRoutes = require("./routes/categories");
 const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
 
 const keywordsRoutes = require("./routes/keywords");
+const uploadProfilePic = require("./routes/Content Filtering/UploadUserPic");
 const pdfrequestretrieval = require("./routes/Pdf-request-retrieval");
-
 const Notification = require("./routes/UserDash");
 const pdfRequestRoutes = require("./routes/RequestPDFRoutes");
 const InstitutionRoutes =require("./routes/InstitutionRoutes");
@@ -75,7 +75,7 @@ app.use(roleRoutes);
 app.use(userRoutes);
 app.use(authRoutes);
 app.use(PasswordReset);
-
+app.use(uploadProfilePic);
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
