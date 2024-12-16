@@ -177,7 +177,7 @@ router.get('/users/:user_id', async (req, res) => {
 });
 
 // Update User Information
-outer.put('/users/update/:userId', (req, res) => {
+router.put('/users/update/:userId', (req, res) => {
   try {
     const userId = req.params.userId;
     const { first_name, middle_name, last_name, suffix } = req.body;
