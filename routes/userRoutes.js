@@ -122,6 +122,7 @@ router.get('/users/all', async (req, res) => {
     u.role_id, 
     u.program_id, 
     COALESCE(i.institution_name, 'N/A') AS institution, -- Handle missing institution
+    i.institution_id,
     r.role_name, 
     COALESCE(p.program_name, 'N/A') AS program_name -- Handle missing program
 FROM 
