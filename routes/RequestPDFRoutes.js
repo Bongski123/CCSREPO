@@ -8,30 +8,13 @@ const router = express.Router();
 
 
 // Create a transporter object using Gmail (or another email service)
-const sendRejectionEmail = async (email, name, title) => {
-  const transporter = nodemailer.createTransport({
-      service: 'gmail', // or your email provider
-      auth: {
-          user: 'ncfresearchnexus@gmail.com', // Your email
-          pass: 'apnrnhrzikfjshut', // Your email password or app-specific password
-      },
-  });
-
-  const mailOptions = {
-    from: 'ncfresearchnexus@gmail.com',
-    to: email,
-    subject: 'PDF Request Rejected',
-    html: `
-      <p>Dear ${name},</p>
-      <p>We regret to inform you that your request for the research titled <b>"${title}"</b> has been rejected.</p>
-      <p>If you have further concerns or questions, please feel free to reach out.</p>
-      <p>Thank you for your understanding.</p>
-      <p>Best regards,<br/>CCS Repository Team</p>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-};
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // or your email provider
+  auth: {
+    user: 'ncfresearchnexus@gmail.com', // Your email
+    pass: 'apnrnhrzikfjshut', // Your email password or app-specific password
+  },
+});
 
 
 // POST /request-pdf endpoint
@@ -81,42 +64,51 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
   const requestId = req.params.request_id;
 
   try {
-    // Step 1: Fetch the request details (like research title, requester's name, and email)
-    const query = 'SELECT requester_email, requester_name, research_title FROM pdf_requests WHERE request_id = ?';
-    db.query(query, [requestId], async (err, results) => {
-      if (err) {
-        console.error('Error fetching PDF request details:', err);
-        return res.status(500).json({ message: 'Error fetching PDF request details' });
-      }
+    // Step 1: Fetch request details (requester's name, email, and research title)
+    const [results] = await db.query(`
+      SELECT requester_email, requester_name, research_title 
+      FROM pdf_requests 
+      WHERE request_id = ?
+    `, [requestId]);
 
-      if (results.length === 0) {
-        return res.status(404).json({ message: 'PDF request not found' });
-      }
+    if (results.length === 0) {
+      console.log('Request not found');
+      return res.status(404).send('PDF request not found');
+    }
 
-      const { requester_email, requester_name, research_title } = results[0];
+    const { requester_email, requester_name, research_title } = results[0];
 
-      // Step 2: Update the request status to 'Rejected'
-      const updateQuery = 'UPDATE pdf_requests SET status = "Rejected" WHERE request_id = ?';
-      db.query(updateQuery, [requestId], async (err, result) => {
-        if (err) {
-          console.error('Error updating PDF request status:', err);
-          return res.status(500).json({ message: 'Error updating PDF request status' });
-        }
+    console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}`);
 
-        // Step 3: Send rejection email
-        try {
-          await sendRejectionEmail(requester_email, requester_name, research_title);
-          return res.status(200).json({ message: 'PDF request rejected and email sent successfully' });
-        } catch (emailError) {
-          console.error('Error sending rejection email:', emailError);
-          return res.status(500).json({ message: 'PDF request rejected, but failed to send email' });
-        }
+    // Step 2: Update the request status to 'Rejected'
+    await db.query('UPDATE pdf_requests SET status = ? WHERE request_id = ?', ['Rejected', requestId]);
+
+    // Step 3: Send rejection email
+    try {
+      await transporter.sendMail({
+        from: 'CCS Repository Team <ncfresearchnexus@gmail.com>',
+        to: requester_email,
+        subject: 'PDF Request Rejected',
+        html: `
+          <p>Dear ${requester_name},</p>
+          <p>We regret to inform you that your request for the research titled <b>"${research_title}"</b> has been rejected.</p>
+          <p>If you have any questions or concerns, please feel free to reach out.</p>
+          <p>Thank you for your understanding.</p>
+          <p>Best regards,<br/>CCS Repository Team</p>
+        `,
       });
-    });
+
+      console.log('Rejection email sent successfully');
+
+      // Step 4: Respond with success message
+      return res.status(200).send('PDF request rejected and email sent successfully');
+    } catch (emailError) {
+      console.error('Error sending rejection email:', emailError.message);
+      return res.status(500).send('Request rejected, but failed to send rejection email');
+    }
   } catch (error) {
-    console.error('Error rejecting PDF request:', error);
-    return res.status(500).json({ message: 'Failed to reject PDF request' });
+    console.error('Error rejecting PDF request:', error.message);
+    return res.status(500).send('Internal Server Error');
   }
 });
-
 module.exports = router;
