@@ -339,6 +339,31 @@ router.get('/daily/downloads', async (req, res) => {
   
 
 
+  router.put('/admin/update/userId', (req, res) => {
+    const { userId } = req.params;
+    const { first_name, middle_name, last_name, email, role_id, institution_id, program_id } = req.body;
+  
+    // Check if all required fields are provided
+    if (!first_name || !last_name || !email || !role_id || !institution_id || !program_id) {
+      return res.status(400).json({ error: 'Please provide all required fields.' });
+    }
+  
+    const query = `UPDATE users SET first_name = ?, middle_name = ?, last_name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ? WHERE user_id = ?`;
+    const values = [first_name, middle_name, last_name, email, role_id, institution_id, program_id, userId];
+  
+    db.query(query, values, (err, result) => {
+      if (err) {
+        console.error('Error updating user:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      res.json({ message: 'User updated successfully', user_id: userId });
+    });
+  });
   
 
 
