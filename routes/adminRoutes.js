@@ -339,25 +339,33 @@ router.get('/daily/downloads', async (req, res) => {
   
 
 // Corrected route with dynamic userId in URL
-router.put('/admin/update/:userId', (req, res) => {
+router.put('/admin/update/:userId', async (req, res) => {
   const { userId } = req.params;
   const { first_name, middle_name, last_name, email, role_id, institution_id, program_id } = req.body;
 
-  const query = `UPDATE users SET first_name = ?, middle_name = ?, last_name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ? WHERE user_id = ?`;
+  const query = `
+    UPDATE users
+    SET first_name = ?, middle_name = ?, last_name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ?
+    WHERE user_id = ?;
+  `;
   const values = [first_name, middle_name, last_name, email, role_id, institution_id, program_id, userId];
 
-  db.query(query, values, (err, result) => {
-      if (err) {
-          console.error('Error updating user:', err);
-          return res.status(500).json({ error: 'Internal server error' });
-      }
+  try {
+    const [result] = await db.query(query, values);
 
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ error: 'User not found' });
-      }
+    console.log('Query result:', result);  // For debugging
 
-      res.json({ message: 'User updated successfully', user_id: userId });
-  });
+    if (result.affectedRows > 0) {
+      console.log('User info updated successfully');
+      return res.status(200).json({ message: 'User updated successfully', user_id: userId });
+    } else {
+      console.log('User not found or no changes made');
+      return res.status(404).json({ error: 'User not found or no changes made' });
+    }
+  } catch (err) {
+    console.error('Error updating user:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
   
