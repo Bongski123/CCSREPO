@@ -368,5 +368,51 @@ router.put('/admin/update/:userId', async (req, res) => {
   }
 });
 
+
+
+router.get('/admin/users/all', async (req, res) => {
+  try {
+    // SQL query to fetch user data with individual name fields
+    const query = `
+      SELECT 
+        u.user_id, 
+        u.first_name, 
+        u.middle_name, 
+        u.last_name, 
+        u.suffix, 
+        u.email, 
+        u.password, 
+        u.role_id, 
+        u.program_id, 
+        COALESCE(i.institution_name, 'N/A') AS institution, -- Handle missing institution
+        i.institution_id,
+        r.role_name, 
+        COALESCE(p.program_name, 'N/A') AS program_name -- Handle missing program
+      FROM 
+        users u
+      JOIN 
+        roles r ON u.role_id = r.role_id
+      LEFT JOIN 
+        program p ON u.program_id = p.program_id
+      LEFT JOIN 
+        institution i ON u.institution_id = i.institution_id;
+    `;
+    
+    // Execute the query
+    const [rows] = await db.query(query);
+    
+    // If no records are found, return a message
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No users found.' });
+    }
+
+    // Return the retrieved rows (all user data)
+    res.status(200).json({ users: rows });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'An error occurred while fetching the users.' });
+  }
+});
+
   
 module.exports = router;
