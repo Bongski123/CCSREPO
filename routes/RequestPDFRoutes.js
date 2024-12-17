@@ -64,7 +64,7 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
   const requestId = req.params.request_id;
 
   try {
-    // Step 1: Fetch request details (requester's name, email, and research title)
+    // Step 1: Fetch request details
     const [results] = await db.query(`
       SELECT requester_email, requester_name, research_title 
       FROM pdf_requests 
@@ -80,7 +80,7 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
 
     console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}`);
 
-    // Step 2: Update the request status to 'Rejected'
+    // Step 2: Update status to "Rejected"
     await db.query('UPDATE pdf_requests SET status = ? WHERE request_id = ?', ['Rejected', requestId]);
 
     // Step 3: Send rejection email
@@ -100,8 +100,12 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
 
       console.log('Rejection email sent successfully');
 
-      // Step 4: Respond with success message
-      return res.status(200).send('PDF request rejected and email sent successfully');
+      // Step 4: Delete the request from the database
+      await db.query('DELETE FROM pdf_requests WHERE request_id = ?', [requestId]);
+      console.log('Request deleted successfully');
+
+      // Step 5: Respond with success message
+      return res.status(200).send('PDF request rejected, email sent, and request deleted successfully');
     } catch (emailError) {
       console.error('Error sending rejection email:', emailError.message);
       return res.status(500).send('Request rejected, but failed to send rejection email');
@@ -111,4 +115,5 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
     return res.status(500).send('Internal Server Error');
   }
 });
+
 module.exports = router;
