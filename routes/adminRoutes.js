@@ -343,10 +343,6 @@ router.get('/daily/downloads', async (req, res) => {
     const { userId } = req.params;
     const { first_name, middle_name, last_name, email, role_id, institution_id, program_id } = req.body;
   
-    // Check if all required fields are provided
-    if (!first_name || !last_name || !email || !role_id || !institution_id || !program_id) {
-      return res.status(400).json({ error: 'Please provide all required fields.' });
-    }
   
     const query = `UPDATE users SET first_name = ?, middle_name = ?, last_name = ?, email = ?, role_id = ?, institution_id = ?, program_id = ? WHERE user_id = ?`;
     const values = [first_name, middle_name, last_name, email, role_id, institution_id, program_id, userId];
