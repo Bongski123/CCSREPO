@@ -53,6 +53,7 @@ const EmailVerification=require("./routes/EmailVerification");
 const privacyRoutes = require('./routes/FilePrivacy'); 
 const ProfilepicRetrieval = require('./routes/Content Filtering/ProfilePicRetrieval'); 
 const AuthorsProfilePic = require('./routes/Authors/authorsProfilepic'); 
+const AuthorsProgram = require('./routes/Authors/AuthorsProgram'); 
 
 //reset password
 
@@ -96,6 +97,8 @@ app.use(authorRoutes);
 app.use(pdfrequestretrieval);
 app.use(ProfilepicRetrieval);
 app.use(AuthorsProfilePic);
+app.use(AuthorsProgram);
+
 
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);

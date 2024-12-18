@@ -70,10 +70,10 @@ router.get('/profilepic/authors/:authorId', async (req, res) => {
       const author = authorRows[0];
       
       const [userRows] = await db.execute(`
-        SELECT u.profile_picture, p.program_name
-        FROM users u
-        JOIN program p ON u.program_id = p.program_id
-        WHERE u.email = ?`, [author.email]);
+        SELECT profile_picture
+        FROM users 
+      
+        WHERE email = ?`, [author.email]);
   
       let profilePictureFileId = null;
       let programName = null;
