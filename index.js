@@ -34,6 +34,7 @@ const filterRoutes = require("./routes/filterRoutes");
 // Dashboard
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const authorRoutes = require("./routes/Content Filtering/browseRoutes")
+const Heartbeat = require("./routes/Content Filtering/HeartBeat");
 
 const categoriesRoutes = require("./routes/categories");
 const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
@@ -77,6 +78,7 @@ app.use(userRoutes);
 app.use(authRoutes);
 app.use(PasswordReset);
 app.use(uploadProfilePic);
+app.use(Heartbeat);
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
