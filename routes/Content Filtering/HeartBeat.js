@@ -30,7 +30,7 @@ router.post('/admin/heartbeat/:userId', async (req, res) => {
 
 // Example route to get online users
 router.get('/admin/online-users', async (req, res) => {
-  const threshold = 5 * 60; // 5 minutes in seconds
+  const threshold = 1 * 60; 
 
   // Query to find users who have been active in the last 5 minutes
   const query = `
