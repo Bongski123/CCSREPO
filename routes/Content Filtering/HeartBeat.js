@@ -5,15 +5,15 @@ const db = require('../../database/db'); // Import database connection
 const router = express.Router();
 
 
-router.post('/admin/heartbeat/:user_id', async (req, res) => {
-  const user_id = req.params.user_id;
+router.post('/admin/heartbeat/:userId', async (req, res) => {
+  const userId = req.params.userId;
 
   // Using a Promise to handle the asynchronous query
   const query = 'UPDATE users SET last_active = NOW() WHERE user_id = ?';
 
   try {
     // Promisified query
-    const [result] = await db.query(query, [user_id]);
+    const [result] = await db.query(query, [userId]);
     
     // Check if the update was successful
     if (result.affectedRows > 0) {
@@ -58,14 +58,14 @@ router.get('/admin/online-users', async (req, res) => {
 
 
 // Backend route to update user status to offline
-router.post('/admin/logout/:user_id', async (req, res) => {
-  const user_id = req.params.user_id;
+router.post('/admin/logout/:userId', async (req, res) => {
+  const userId = req.params.userId;
 
   // Update last_active field to NULL or old timestamp when logging out
   const query = 'UPDATE users SET last_active = NULL WHERE user_id = ?';
 
   try {
-    const [result] = await db.query(query, [user_id]);
+    const [result] = await db.query(query, [userId]);
 
     if (result.affectedRows > 0) {
       return res.status(200).send('User logged out successfully');
