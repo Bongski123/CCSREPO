@@ -69,12 +69,18 @@ router.get('/profilepic/authors/:authorId', async (req, res) => {
   
       const author = authorRows[0];
       
-      // Step 2: Get the user's profile_picture file_id by matching email
-      const [userRows] = await db.execute('SELECT profile_picture FROM users WHERE email = ?', [author.email]);
+      const [userRows] = await db.execute(`
+        SELECT u.profile_picture, p.program_name
+        FROM users u
+        JOIN program p ON u.program_id = p.program_id
+        WHERE u.email = ?`, [author.email]);
   
       let profilePictureFileId = null;
+      let programName = null;
+    
       if (userRows.length > 0) {
         profilePictureFileId = userRows[0].profile_picture; // Get the profile picture file_id if found
+        programName = userRows[0].program_name; // Get the program_name if found
       }
   
       if (!profilePictureFileId) {
