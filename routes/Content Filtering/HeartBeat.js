@@ -56,4 +56,27 @@ router.get('/admin/online-users', async (req, res) => {
   }
 });
 
+
+// Backend route to update user status to offline
+router.post('/admin/logout/:user_id', async (req, res) => {
+  const user_id = req.params.user_id;
+
+  // Update last_active field to NULL or old timestamp when logging out
+  const query = 'UPDATE users SET last_active = NULL WHERE user_id = ?';
+
+  try {
+    const [result] = await db.query(query, [user_id]);
+
+    if (result.affectedRows > 0) {
+      return res.status(200).send('User logged out successfully');
+    } else {
+      return res.status(404).send('User not found');
+    }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Error logging out user');
+  }
+});
+
+
   module.exports = router;
