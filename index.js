@@ -37,7 +37,7 @@ const authorRoutes = require("./routes/Content Filtering/browseRoutes")
 const Heartbeat = require("./routes/Content Filtering/HeartBeat");
 
 const categoriesRoutes = require("./routes/categories");
-const pdfRoutes = require('./routes/pdfFILES'); // Adjust the path as necessary
+const pdfRoutes = require('./routes/pdfFILES'); 
 
 const keywordsRoutes = require("./routes/keywords");
 const uploadProfilePic = require("./routes/Content Filtering/UploadUserPic");
@@ -50,8 +50,9 @@ const InstitutionRoutes =require("./routes/InstitutionRoutes");
 const googleRoutes=require("./routes/googleLogin");
 const EmailVerification=require("./routes/EmailVerification");
 
-const privacyRoutes = require('./routes/FilePrivacy'); // Path to the file with the above route
-const ProfilepicRetrieval = require('./routes/Content Filtering/ProfilePicRetrieval'); // Path to the file with the above route
+const privacyRoutes = require('./routes/FilePrivacy'); 
+const ProfilepicRetrieval = require('./routes/Content Filtering/ProfilePicRetrieval'); 
+const AuthorsProfilePic = require('./routes/Authors/authorsProfilepic'); 
 
 //reset password
 
@@ -79,6 +80,7 @@ app.use(authRoutes);
 app.use(PasswordReset);
 app.use(uploadProfilePic);
 app.use(Heartbeat);
+
 // CRUD Documents
 app.use(documentRoutes);
 app.use(adminRoutes);
@@ -93,6 +95,8 @@ app.use(filterRoutes);
 app.use(authorRoutes);
 app.use(pdfrequestretrieval);
 app.use(ProfilepicRetrieval);
+app.use(AuthorsProfilePic);
+
 // Dashboard such as Citations Adding
 app.use(dashboardRoutes);
 app.use(Notification);
