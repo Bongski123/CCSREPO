@@ -8,7 +8,6 @@ const db = require("../database/db");
 
 const router = express.Router();
 
-// Google Drive API setup using service account credentials from environment variable or direct object
 const googleServiceAccount = {
   type: "service_account",
   project_id: "ccsrepository-444308",
@@ -50,7 +49,7 @@ FgTYhJbE4mHJCmVUxn1C+iUleg==\n-----END PRIVATE KEY-----`,
 };
 
 const auth = new google.auth.GoogleAuth({
-  credentials: googleServiceAccount, // Using credentials object directly
+  credentials: googleServiceAccount,
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
@@ -59,10 +58,9 @@ const drive = google.drive({
   auth,
 });
 
-// Configure multer for memory storage
+
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper to create a readable stream from a buffer
 const bufferToStream = (buffer) => {
   const readable = new Readable();
   readable.push(buffer);
