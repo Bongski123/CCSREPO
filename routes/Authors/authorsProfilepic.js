@@ -1,7 +1,7 @@
 
 const express = require('express');
 
-const db = require('../../database/db'); // Import database connection
+const db = require('../../database/db'); 
 const { google } = require('googleapis');
 const router = express.Router();
 
@@ -45,10 +45,10 @@ const googleServiceAccount = {
     client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ccsrepo%40ccsrepository-444308.iam.gserviceaccount.com",
     universe_domain: "googleapis.com",
   };
-// Google Drive API setup using service account
+
 const auth = new google.auth.GoogleAuth({
     credentials: googleServiceAccount,
-    scopes: ["https://www.googleapis.com/auth/drive"], // Required scope for file access
+    scopes: ["https://www.googleapis.com/auth/drive"], 
 });
 const drive = google.drive({
     version: "v3",
@@ -60,7 +60,7 @@ router.get('/profilepic/authors/:authorId', async (req, res) => {
     const authorId = req.params.authorId;
   
     try {
-      // Step 1: Get author details by authorId
+
       const [authorRows] = await db.execute('SELECT author_name, email FROM authors WHERE author_id = ?', [authorId]);
   
       if (authorRows.length === 0) {
@@ -79,8 +79,8 @@ router.get('/profilepic/authors/:authorId', async (req, res) => {
       let programName = null;
     
       if (userRows.length > 0) {
-        profilePictureFileId = userRows[0].profile_picture; // Get the profile picture file_id if found
-        programName = userRows[0].program_name; // Get the program_name if found
+        profilePictureFileId = userRows[0].profile_picture; 
+        programName = userRows[0].program_name; 
       }
   
       if (!profilePictureFileId) {
@@ -88,24 +88,22 @@ router.get('/profilepic/authors/:authorId', async (req, res) => {
       }
   
       try {
-        // Step 3: Fetch file metadata from Google Drive
+       
         const metadataResponse = await drive.files.get({
           fileId: profilePictureFileId,
           fields: 'name, mimeType',
         });
   
-        // Step 4: Check if the file is an image
         if (!metadataResponse.data.mimeType.startsWith('image/')) {
           return res.status(400).json({ message: "The file is not an image" });
         }
-  
-        // Step 5: Fetch the image content from Google Drive
+
         const driveResponse = await drive.files.get({
           fileId: profilePictureFileId,
           alt: 'media',
         }, { responseType: 'arraybuffer' });
   
-        // Step 6: Send the image file to the client
+    
         res.setHeader('Content-Type', metadataResponse.data.mimeType);
         res.setHeader('Content-Disposition', 'inline; filename="' + metadataResponse.data.name + '"');
         res.send(Buffer.from(driveResponse.data));

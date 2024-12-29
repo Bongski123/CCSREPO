@@ -320,6 +320,91 @@ router.get('/daily/downloads', async (req, res) => {
   
 
 
+
+
+  router.get('/weekly/downloads', async (req, res) => {
+    try {
+      const [results] = await db.query(`
+        SELECT 
+          YEAR(publish_date) AS year, 
+          WEEK(publish_date) AS week, 
+          SUM(downloadCount) AS downloads
+        FROM researches 
+        GROUP BY YEAR(publish_date), WEEK(publish_date)
+        ORDER BY YEAR(publish_date), WEEK(publish_date) ASC
+      `);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching weekly downloads:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+  router.get('/weekly/citations', async (req, res) => {
+    try {
+      const [results] = await db.query(`
+        SELECT 
+          YEAR(publish_date) AS year, 
+          WEEK(publish_date) AS week, 
+          SUM(citeCount) AS citations
+        FROM researches 
+        GROUP BY YEAR(publish_date), WEEK(publish_date)
+        ORDER BY YEAR(publish_date), WEEK(publish_date) ASC
+      `);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching weekly citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+  
+  router.get('/monthly/downloads', async (req, res) => {
+    try {
+      const [results] = await db.query(`
+        SELECT 
+          YEAR(publish_date) AS year, 
+          MONTH(publish_date) AS month, 
+          SUM(downloadCount) AS downloads
+        FROM researches 
+        GROUP BY YEAR(publish_date), MONTH(publish_date)
+        ORDER BY YEAR(publish_date), MONTH(publish_date) ASC
+      `);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching monthly downloads:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+  
+  router.get('/monthly/citations', async (req, res) => {
+    try {
+      const [results] = await db.query(`
+        SELECT 
+          YEAR(publish_date) AS year, 
+          MONTH(publish_date) AS month, 
+          SUM(citeCount) AS citations
+        FROM researches 
+        GROUP BY YEAR(publish_date), MONTH(publish_date)
+        ORDER BY YEAR(publish_date), MONTH(publish_date) ASC
+      `);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching monthly citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+    
+
+
+
+
+
   router.get('/admin/uploader-stats-by-role', async (req, res) => {
     try {
       const [rows] = await db.query(`

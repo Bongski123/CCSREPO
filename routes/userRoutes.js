@@ -177,7 +177,7 @@ router.get('/users/:user_id', async (req, res) => {
   }
 });
 
-
+  
 // Delete User
 router.delete('/users/delete/:userId', async (req, res) => {
   try {
