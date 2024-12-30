@@ -259,6 +259,103 @@ router.get('/user/daily/downloads', async (req, res) => {
   });
 
 
+// Route to get weekly downloads for an individual uploader
+router.get('/user/weekly/downloads', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT WEEK(publish_date) AS week, SUM(downloadCount) AS downloads 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY WEEK(publish_date) 
+        ORDER BY WEEK(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching weekly downloads:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  // Route to get weekly citations for an individual uploader
+  router.get('/user/weekly/citations', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT WEEK(publish_date) AS week, SUM(citeCount) AS citations 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY WEEK(publish_date) 
+        ORDER BY WEEK(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching weekly citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  // Route to get monthly downloads for an individual uploader
+  router.get('/user/monthly/downloads', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT MONTH(publish_date) AS month, SUM(downloadCount) AS downloads 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY MONTH(publish_date) 
+        ORDER BY MONTH(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching monthly downloads:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  // Route to get monthly citations for an individual uploader
+  router.get('/user/monthly/citations', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT MONTH(publish_date) AS month, SUM(citeCount) AS citations 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY MONTH(publish_date) 
+        ORDER BY MONTH(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching monthly citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+
   // New route for daily views
 router.get('/user/daily/views', async (req, res) => {
     const userId = req.query.userId; // Get the userId from the query parameters
