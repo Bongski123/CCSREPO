@@ -211,7 +211,7 @@ router.get('/user/dashboard', async (req, res) => {
 
 
 // Route to get daily downloads for an individual uploader
-router.get('/user/daily/downloads', async (req, res) => {
+router.get('/user/total/downloads', async (req, res) => {
     const userId = req.query.userId; // Get the userId from the query parameters
   
     if (!userId) {
@@ -332,7 +332,7 @@ router.get('/user/weekly/downloads', async (req, res) => {
   });
   
   // Route to get monthly citations for an individual uploader
-  router.get('/user/monthly/citations', async (req, res) => {
+  router.get('/user/daily/citations', async (req, res) => {
     const userId = req.query.userId;
   
     if (!userId) {
@@ -341,21 +341,29 @@ router.get('/user/weekly/downloads', async (req, res) => {
   
     try {
       const [results] = await db.query(`
-        SELECT MONTH(publish_date) AS month, SUM(citeCount) AS citations 
+        SELECT 
+          DAYOFWEEK(publish_date) AS day_of_week, 
+          SUM(citeCount) AS citations 
         FROM researches 
         WHERE uploader_id = ? 
-        GROUP BY MONTH(publish_date) 
-        ORDER BY MONTH(publish_date) ASC
+        GROUP BY DAYOFWEEK(publish_date) 
+        ORDER BY DAYOFWEEK(publish_date) ASC
       `, [userId]);
   
-      res.json(results);
+      // Format the results for better readability
+      const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const formattedResults = results.map(row => ({
+        day: daysMapping[row.day_of_week - 1], // DAYOFWEEK returns 1 (Sunday) to 7 (Saturday)
+        citations: row.citations
+      }));
+  
+      res.json(formattedResults);
     } catch (error) {
-      console.error('Error fetching monthly citations:', error);
+      console.error('Error fetching daily citations:', error);
       res.status(500).send('Server error');
     }
   });
-
-
+  
   // New route for daily views
 router.get('/user/daily/views', async (req, res) => {
     const userId = req.query.userId; // Get the userId from the query parameters
