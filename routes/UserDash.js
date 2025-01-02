@@ -234,7 +234,45 @@ router.get('/user/total/downloads', async (req, res) => {
     }
   });
   
-  // Route to get daily citations for an individual uploader
+// Route to get daily downloads for an individual uploader (grouped by day of the week)
+router.get('/user/daily/downloads', async (req, res) => {
+  const userId = req.query.userId;
+
+  if (!userId) {
+    return res.status(400).send('User ID is required');
+  }
+
+  try {
+    const [results] = await db.query(`
+      SELECT 
+        DAYOFWEEK(publish_date) AS day_of_week, 
+        SUM(downloadCount) AS downloads 
+      FROM researches 
+      WHERE uploader_id = ? 
+      GROUP BY DAYOFWEEK(publish_date) 
+      ORDER BY DAYOFWEEK(publish_date) ASC
+    `, [userId]);
+
+    // Map day numbers to day names
+    const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Format the results to return day names
+    const formattedResults = Array(7).fill(0).map((_, index) => {
+      const result = results.find(row => row.day_of_week === index + 1);
+      return {
+        day: daysMapping[index], // Map day number to name
+        downloads: result ? result.downloads : 0 // Default to 0 if no data for that day
+      };
+    });
+
+    res.json(formattedResults);
+  } catch (error) {
+    console.error('Error fetching daily downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+
 
 
 // Route to get weekly downloads for an individual uploader
