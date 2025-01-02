@@ -235,28 +235,6 @@ router.get('/user/total/downloads', async (req, res) => {
   });
   
   // Route to get daily citations for an individual uploader
-  router.get('/user/daily/citations', async (req, res) => {
-    const userId = req.query.userId; // Get the userId from the query parameters
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT DATE(publish_date) AS date, SUM(citeCount) AS citations 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY DATE(publish_date) 
-        ORDER BY DATE(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching daily citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
 
 
 // Route to get weekly downloads for an individual uploader
@@ -283,30 +261,7 @@ router.get('/user/weekly/downloads', async (req, res) => {
     }
   });
   
-  // Route to get weekly citations for an individual uploader
-  router.get('/user/weekly/citations', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT WEEK(publish_date) AS week, SUM(citeCount) AS citations 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY WEEK(publish_date) 
-        ORDER BY WEEK(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
+ 
   // Route to get monthly downloads for an individual uploader
   router.get('/user/monthly/downloads', async (req, res) => {
     const userId = req.query.userId;
@@ -363,6 +318,69 @@ router.get('/user/weekly/downloads', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
+
+   // Route to get weekly citations for an individual uploader
+   router.get('/user/weekly/citations', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+  
+    try {
+      const [results] = await db.query(`
+        SELECT WEEK(publish_date) AS week, SUM(citeCount) AS citations 
+        FROM researches 
+        WHERE uploader_id = ? 
+        GROUP BY WEEK(publish_date) 
+        ORDER BY WEEK(publish_date) ASC
+      `, [userId]);
+  
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching weekly citations:', error);
+      res.status(500).send('Server error');
+    }
+  });
+
+   // Route to get monthly citations for an individual uploader
+router.get('/user/monthly/citations', async (req, res) => {
+  const userId = req.query.userId;
+
+  if (!userId) {
+    return res.status(400).send('User ID is required');
+  }
+
+  try {
+    const [results] = await db.query(`
+      SELECT 
+        MONTH(publish_date) AS month, 
+        YEAR(publish_date) AS year, 
+        SUM(citeCount) AS citations 
+      FROM researches 
+      WHERE uploader_id = ? 
+      GROUP BY year, month 
+      ORDER BY year ASC, month ASC
+    `, [userId]);
+
+    // Format the results to return month names
+    const monthsMapping = [
+      'January', 'February', 'March', 'April', 'May', 'June', 
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const formattedResults = results.map(row => ({
+      month: monthsMapping[row.month - 1],
+      year: row.year,
+      citations: row.citations
+    }));
+
+    res.json(formattedResults);
+  } catch (error) {
+    console.error('Error fetching monthly citations:', error);
+    res.status(500).send('Server error');
+  }
+});
+  
   
   // New route for daily views
 router.get('/user/daily/views', async (req, res) => {
@@ -387,6 +405,9 @@ router.get('/user/daily/views', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
+
+ 
+
   
 
 
