@@ -2,10 +2,7 @@ const express = require('express');
 const db = require('../database/db');
 const nodemailer = require('nodemailer');
 
-
 const router = express.Router();
-
-
 
 // Create a transporter object using Gmail (or another email service)
 const transporter = nodemailer.createTransport({
@@ -16,11 +13,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
 // POST /request-pdf endpoint
 router.post('/request-pdf-files', (req, res) => {
   const { researchId, requesterName, requesterEmail, purpose } = req.body;
-  
 
   // Step 1: Fetch the research title based on researchId
   db.query(
@@ -40,37 +35,29 @@ router.post('/request-pdf-files', (req, res) => {
 
       // Step 2: Insert the PDF request into the 'pdf_requests' table
       db.query(
-        'INSERT INTO pdf_requests (research_id,research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?,?)',
-        [researchId,researchTitle, requesterName, requesterEmail, purpose],
+        'INSERT INTO pdf_requests (research_id, research_title, requester_name, requester_email, purpose) VALUES (?, ?, ?, ?, ?)',
+        [researchId, researchTitle, requesterName, requesterEmail, purpose],
         (err, result) => {
           if (err) {
             console.error('Error inserting request into database:', err);
             return res.status(500).json({ error: 'Error inserting request into database' });
           }
 
-         
-            }
-          );
+          return res.status(200).json({ message: 'PDF request created successfully' });
         }
       );
-    
-
+    }
+  );
 });
 
-
-
+// Reject a PDF request
 router.post('/reject-pdf-request/:request_id', async (req, res) => {
   const requestId = req.params.request_id;
-  const { rejection_reason } = req.body; // Get the rejection reason from the request body
-
-  if (!rejection_reason) {
-    return res.status(400).send('Rejection reason is required');
-  }
 
   try {
     // Step 1: Fetch request details, including research authors
-    const [results] = await db.query(`
-      SELECT 
+    const [results] = await db.query(
+      `SELECT 
         pr.requester_email, 
         pr.requester_name, 
         r.title AS research_title, 
@@ -80,8 +67,9 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
       WHERE pr.request_id = ?
-      GROUP BY pr.requester_email, pr.requester_name, r.title
-    `, [requestId]);
+      GROUP BY pr.requester_email, pr.requester_name, r.title`,
+      [requestId]
+    );
 
     if (results.length === 0) {
       console.log('Request not found');
@@ -92,8 +80,8 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
 
     console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}, Authors: ${authors}`);
 
-    // Step 2: Update status to "Rejected" and store the rejection reason
-    await db.query('UPDATE pdf_requests SET status = ?, rejection_reason = ? WHERE request_id = ?', ['Rejected', rejection_reason, requestId]);
+    // Step 2: Update status to "Rejected"
+    await db.query('UPDATE pdf_requests SET status = ? WHERE request_id = ?', ['Rejected', requestId]);
 
     // Step 3: Send rejection email
     try {
@@ -104,7 +92,6 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
         html: `
           <p>Dear ${requester_name},</p>
           <p>We regret to inform you that your request for the research titled <b>"${research_title}"</b> has been rejected.</p>
-          <p><strong>Reason for Rejection:</strong> ${rejection_reason}</p>
           <p>If you have any questions or concerns, please feel free to reach out.</p>
           <p>Thank you for your understanding.</p>
           <p>Best regards,<br/>${authors || 'The Authors'}</p>
@@ -128,6 +115,5 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
     return res.status(500).send('Internal Server Error');
   }
 });
-
 
 module.exports = router;
