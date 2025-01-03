@@ -161,6 +161,7 @@ router.get('/top-downloads', async (req, res) => {
     r.research_id,
     r.title, 
     r.abstract,
+    r.publish_date,
     r.status,
     r.file_privacy,
     COALESCE(r.downloadCount, 0) AS downloadCount, 
@@ -199,6 +200,7 @@ router.get('/trending-searches',async (req, res) => {
  SELECT 
     r.research_id,
     r.title, 
+    r.publish_date,
     r.abstract,
     r.status,
     r.file_privacy,
