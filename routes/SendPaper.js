@@ -66,7 +66,6 @@ const transporter = nodemailer.createTransport({
 });
 
 // API to send PDF via email
-// API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
   const researchID = req.params.research_id;
   const { requester_email } = req.body; // Assume the request contains the recipient's email
@@ -129,7 +128,6 @@ router.post('/send-pdf/:research_id', async (req, res) => {
           subject: `Requested Research Paper: "${title}"`, // Subject with research title
           text: `Dear ${requester_email},\n\n` + 
                 `We are pleased to provide you with the requested research paper titled "${title}".\n\n` +
-            
                 `Please find the paper attached for your reference.\n\n` +
                 `Best regards,\n${authors || 'The Authors'}`, // Email body
           attachments: [
@@ -146,7 +144,11 @@ router.post('/send-pdf/:research_id', async (req, res) => {
         // Update the request status to "approved" in pdf_requests table
         await db.query('UPDATE pdf_requests SET status = ? WHERE research_id = ?', ['approved', researchID]);
 
-        res.send('Email sent successfully and request approved');
+        // Step 2: Delete the PDF request from the database after email is sent successfully
+        await db.query('DELETE FROM pdf_requests WHERE research_id = ?', [researchID]);
+        console.log('Request deleted successfully');
+
+        res.send('Email sent successfully, request approved, and deleted');
       } catch (err) {
         console.error('Error retrieving the file from Google Drive:', err.message);
         res.status(500).send('Error retrieving the file from Google Drive');
