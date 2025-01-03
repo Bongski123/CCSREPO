@@ -59,9 +59,13 @@ router.post('/request-pdf-files', (req, res) => {
 
 
 
-// Reject PDF request (this assumes the request_id is passed in the URL)
 router.post('/reject-pdf-request/:request_id', async (req, res) => {
   const requestId = req.params.request_id;
+  const { rejection_reason } = req.body; // Get the rejection reason from the request body
+
+  if (!rejection_reason) {
+    return res.status(400).send('Rejection reason is required');
+  }
 
   try {
     // Step 1: Fetch request details, including research authors
@@ -88,8 +92,8 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
 
     console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}, Authors: ${authors}`);
 
-    // Step 2: Update status to "Rejected"
-    await db.query('UPDATE pdf_requests SET status = ? WHERE request_id = ?', ['Rejected', requestId]);
+    // Step 2: Update status to "Rejected" and store the rejection reason
+    await db.query('UPDATE pdf_requests SET status = ?, rejection_reason = ? WHERE request_id = ?', ['Rejected', rejection_reason, requestId]);
 
     // Step 3: Send rejection email
     try {
@@ -100,7 +104,7 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
         html: `
           <p>Dear ${requester_name},</p>
           <p>We regret to inform you that your request for the research titled <b>"${research_title}"</b> has been rejected.</p>
-          <p>Author(s): ${authors || 'Unknown'}</p>
+          <p><strong>Reason for Rejection:</strong> ${rejection_reason}</p>
           <p>If you have any questions or concerns, please feel free to reach out.</p>
           <p>Thank you for your understanding.</p>
           <p>Best regards,<br/>${authors || 'The Authors'}</p>

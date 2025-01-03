@@ -129,7 +129,7 @@ router.post('/send-pdf/:research_id', async (req, res) => {
           subject: `Requested Research Paper: "${title}"`, // Subject with research title
           text: `Dear ${requester_email},\n\n` + 
                 `We are pleased to provide you with the requested research paper titled "${title}".\n\n` +
-                `Authors: ${authors || 'Unknown'}\n\n` +
+            
                 `Please find the paper attached for your reference.\n\n` +
                 `Best regards,\n${authors || 'The Authors'}`, // Email body
           attachments: [
