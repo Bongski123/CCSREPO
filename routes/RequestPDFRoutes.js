@@ -64,11 +64,19 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
   const requestId = req.params.request_id;
 
   try {
-    // Step 1: Fetch request details
+    // Step 1: Fetch request details, including research authors
     const [results] = await db.query(`
-      SELECT requester_email, requester_name, research_title 
-      FROM pdf_requests 
-      WHERE request_id = ?
+      SELECT 
+        pr.requester_email, 
+        pr.requester_name, 
+        r.title AS research_title, 
+        GROUP_CONCAT(a.author_name SEPARATOR ', ') AS authors
+      FROM pdf_requests pr
+      JOIN researches r ON pr.research_id = r.research_id
+      LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+      LEFT JOIN authors a ON ra.author_id = a.author_id
+      WHERE pr.request_id = ?
+      GROUP BY pr.requester_email, pr.requester_name, r.title
     `, [requestId]);
 
     if (results.length === 0) {
@@ -76,9 +84,9 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
       return res.status(404).send('PDF request not found');
     }
 
-    const { requester_email, requester_name, research_title } = results[0];
+    const { requester_email, requester_name, research_title, authors } = results[0];
 
-    console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}`);
+    console.log(`Rejecting request for: ${requester_name}, Email: ${requester_email}, Title: ${research_title}, Authors: ${authors}`);
 
     // Step 2: Update status to "Rejected"
     await db.query('UPDATE pdf_requests SET status = ? WHERE request_id = ?', ['Rejected', requestId]);
@@ -92,9 +100,10 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
         html: `
           <p>Dear ${requester_name},</p>
           <p>We regret to inform you that your request for the research titled <b>"${research_title}"</b> has been rejected.</p>
+          <p>Author(s): ${authors || 'Unknown'}</p>
           <p>If you have any questions or concerns, please feel free to reach out.</p>
           <p>Thank you for your understanding.</p>
-          <p>Best regards,<br/>CCS Repository Team</p>
+          <p>Best regards,<br/>${authors || 'The Authors'}</p>
         `,
       });
 
@@ -115,5 +124,6 @@ router.post('/reject-pdf-request/:request_id', async (req, res) => {
     return res.status(500).send('Internal Server Error');
   }
 });
+
 
 module.exports = router;

@@ -66,6 +66,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // API to send PDF via email
+// API to send PDF via email
 router.post('/send-pdf/:research_id', async (req, res) => {
   const researchID = req.params.research_id;
   const { requester_email } = req.body; // Assume the request contains the recipient's email
@@ -121,14 +122,16 @@ router.post('/send-pdf/:research_id', async (req, res) => {
 
         const fileBuffer = Buffer.from(driveResponse.data);
 
-        // Send email with attachment
+        // Send email with attachment, signed by the author
         await transporter.sendMail({
-          from: 'Nodemailer', // Sender address
+          from: `${authors} <ncfresearchnexus@gmail.com>`, // Sender as authors' names
           to: requester_email, // Recipient's email
-          subject: 'Requested Research Paper', // Subject line
-          text: `Please find the requested research paper titled "${title}" attached.
-
-Authors: ${authors || 'Unknown'}`, // Plain text body with title and authors
+          subject: `Requested Research Paper: "${title}"`, // Subject with research title
+          text: `Dear ${requester_email},\n\n` + 
+                `We are pleased to provide you with the requested research paper titled "${title}".\n\n` +
+                `Authors: ${authors || 'Unknown'}\n\n` +
+                `Please find the paper attached for your reference.\n\n` +
+                `Best regards,\n${authors || 'The Authors'}`, // Email body
           attachments: [
             {
               filename: fileName,
@@ -157,6 +160,7 @@ Authors: ${authors || 'Unknown'}`, // Plain text body with title and authors
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
   
