@@ -595,25 +595,31 @@ router.put('/research/:researchId/abstract', (req, res) => {
 });
 
 router.get('/research/years', async (req, res) => {
+  const userId = req.query.userId;  // Assuming the userId is sent as a query parameter
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+  
   try {
     const query = `
       SELECT DISTINCT YEAR(publish_date) AS year
       FROM researches
-      WHERE publish_date IS NOT NULL
+      WHERE publish_date IS NOT NULL AND uploader_id = ?
       ORDER BY year DESC
     `;
     
-    // Log the query being executed
-    console.log('Executing query:', query);
+    // Log the query and userId for debugging
+    console.log('Executing query:', query, userId);
     
     // Execute the query and get results
-    const [results] = await db.query(query);
+    const [results] = await db.query(query, [userId]);
     
     // Log the results to inspect
     console.log('Results:', results);
     
     if (results.length === 0) {
-      return res.status(404).json({ error: 'No researches found' });
+      return res.status(404).json({ error: 'No researches found for the user' });
     }
 
     // Map the results to an array of years
