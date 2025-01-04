@@ -588,6 +588,19 @@ router.put('/research/:researchId/abstract', (req, res) => {
   });
 });
 
+router.get('/research/years', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT DISTINCT YEAR(publish_date) AS year
+      FROM researches
+      ORDER BY year DESC
+    `);
+    res.json(results.map(row => row.year));
+  } catch (error) {
+    console.error('Error fetching available years:', error);
+    res.status(500).send('Server error');
+  }
+});
 
 
   
