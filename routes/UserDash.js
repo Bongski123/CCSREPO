@@ -475,28 +475,34 @@ router.get('/user/monthly/citations', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
-  router.get('/user/monthly/views', async (req, res) => {
-    const userId = req.query.userId;
+  router.get('/research/years', async (req, res) => {
+    const uploaderId = req.query.uploaderId;  // Get uploader_id from the query string
   
-    if (!userId) {
-      return res.status(400).send('User ID is required');
+    if (!uploaderId) {
+      return res.status(400).send('Uploader ID is required');
     }
   
     try {
       const [results] = await db.query(`
-        SELECT MONTH(publish_date) AS month, YEAR(publish_date) AS year, SUM(viewCount) AS views
+        SELECT DISTINCT YEAR(publish_date) AS year
         FROM researches
         WHERE uploader_id = ?
-        GROUP BY MONTH(publish_date), YEAR(publish_date)
-        ORDER BY YEAR(publish_date) ASC, MONTH(publish_date) ASC
-      `, [userId]);
+        AND publish_date IS NOT NULL
+        ORDER BY year DESC
+      `, [uploaderId]);
   
-      res.json(results);
+      if (results.length === 0) {
+        return res.status(404).send('Research not found');
+      }
+  
+      const years = results.map(row => row.year);  // Extract years from the results
+      res.json(years);  // Send the years in the response
     } catch (error) {
-      console.error('Error fetching monthly views:', error);
+      console.error('Error fetching research years:', error);
       res.status(500).send('Server error');
     }
   });
+  
     
   
 
@@ -590,21 +596,36 @@ router.put('/research/:researchId/abstract', (req, res) => {
 
 router.get('/research/years', async (req, res) => {
   try {
-    const [results] = await db.query(`
+    const query = `
       SELECT DISTINCT YEAR(publish_date) AS year
       FROM researches
+      WHERE publish_date IS NOT NULL
       ORDER BY year DESC
-    `);
-    res.json(results.map(row => row.year));
+    `;
+    
+    // Log the query being executed
+    console.log('Executing query:', query);
+    
+    // Execute the query and get results
+    const [results] = await db.query(query);
+    
+    // Log the results to inspect
+    console.log('Results:', results);
+    
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No researches found' });
+    }
+
+    // Map the results to an array of years
+    const years = results.map(row => row.year);
+
+    // Send the years in the response
+    res.status(200).json(years);
   } catch (error) {
-    console.error('Error fetching available years:', error);
-    res.status(500).send('Server error');
+    console.error('Error fetching available years:', error.message);
+    res.status(500).json({ error: 'An error occurred while fetching years.' });
   }
 });
-
-
-  
-
 
 
 module.exports = router;
