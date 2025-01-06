@@ -188,10 +188,10 @@ router.get('/user/dashboard', async (req, res) => {
     try {
         const query = `
             SELECT 
-                COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
-                COALESCE(SUM(r.citeCount), 0) AS total_citations,
+                COALESCE(SUM(r.download_count), 0) AS total_downloads,
+                COALESCE(SUM(r.citation_count), 0) AS total_citations,
                 COALESCE(COUNT(r.research_id), 0) AS total_researches,
-                COALESCE(SUM(r.viewCount), 0) AS total_views  
+                COALESCE(SUM(r.view_count), 0) AS total_views  
             FROM researches r
             WHERE r.uploader_id = ?`;
 
@@ -208,6 +208,8 @@ router.get('/user/dashboard', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+
 
 
 // Get total citations for a specific uploader_id
@@ -245,7 +247,7 @@ router.get('/total/downloads/:research_id', async (req, res) => {
 });
 
 // Get daily citation counts for a specific uploader_id
-router.get('/daily/citations/:research_id', async (req, res) => {
+router.get('/user/daily/citations/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -264,7 +266,7 @@ router.get('/daily/citations/:research_id', async (req, res) => {
 });
 
 // Get daily download counts for a specific uploader_id
-router.get('/daily/downloads/:research_id', async (req, res) => {
+router.get('/user/daily/downloads/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -283,7 +285,7 @@ router.get('/daily/downloads/:research_id', async (req, res) => {
 });
 
 // Get daily view counts for a specific uploader_id
-router.get('/daily/views/:research_id', async (req, res) => {
+router.get('/user/daily/views/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -302,7 +304,7 @@ router.get('/daily/views/:research_id', async (req, res) => {
 });
 
 // Get weekly citation counts for a specific uploader_id
-router.get('/weekly/citations/:research_id', async (req, res) => {
+router.get('/user/weekly/citations/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -321,7 +323,7 @@ router.get('/weekly/citations/:research_id', async (req, res) => {
 });
 
 // Get weekly download counts for a specific uploader_id
-router.get('/weekly/downloads/:research_id', async (req, res) => {
+router.get('/user/weekly/downloads/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -340,7 +342,7 @@ router.get('/weekly/downloads/:research_id', async (req, res) => {
 });
 
 // Get weekly view counts for a specific uploader_id
-router.get('/weekly/views/:research_id', async (req, res) => {
+router.get('/user/weekly/views/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -359,7 +361,7 @@ router.get('/weekly/views/:research_id', async (req, res) => {
 });
 
 // Get monthly citation counts for a specific uploader_id
-router.get('/monthly/citations/:research_id', async (req, res) => {
+router.get('/user/monthly/citations/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -378,7 +380,7 @@ router.get('/monthly/citations/:research_id', async (req, res) => {
 });
 
 // Get monthly download counts for a specific uploader_id
-router.get('/monthly/downloads/:research_id', async (req, res) => {
+router.get('/user/monthly/downloads/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
@@ -397,7 +399,7 @@ router.get('/monthly/downloads/:research_id', async (req, res) => {
 });
 
 // Get monthly view counts for a specific uploader_id
-router.get('/monthly/views/:research_id', async (req, res) => {
+router.get('/user/monthly/views/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
