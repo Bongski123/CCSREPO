@@ -179,35 +179,39 @@ router.delete('/collection/remove/:userId/:researchId', async (req, res) => {
 
 // Endpoint to fetch total downloads, citations, and researches for a specific uploader
 router.get('/user/dashboard', async (req, res) => {
-    const userId = req.query.user_id; // Get userId from the query parameters
+  const userId = req.query.user_id;
+  if (!userId) {
+      return res.status(400).json({ message: 'User ID not provided.' });
+  }
 
-    if (!userId) {
-        return res.status(400).json({ message: 'User ID not provided.' });
-    }
+  try {
+      const query = `SELECT 
+          COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
+          COALESCE(SUM(r.citeCount), 0) AS total_citations,
+          COALESCE(COUNT(r.research_id), 0) AS total_researches,
+          COALESCE(SUM(r.viewCount), 0) AS total_views  
+          FROM researches r
+          WHERE r.uploader_id = ?`;
 
-    try {
-        const query = `
-            SELECT 
-                COALESCE(SUM(r.download_count), 0) AS total_downloads,
-                COALESCE(SUM(r.citation_count), 0) AS total_citations,
-                COALESCE(COUNT(r.research_id), 0) AS total_researches,
-                COALESCE(SUM(r.view_count), 0) AS total_views  
-            FROM researches r
-            WHERE r.uploader_id = ?`;
+      const [results] = await db.query(query, [userId]);
 
-        const [results] = await db.query(query, [userId]);
+      if (results.length === 0) {
+          return res.status(404).json({ message: 'No data found for the provided user ID.' });
+      }
 
-        res.json({
-            total_downloads: results[0].total_downloads,
-            total_citations: results[0].total_citations,
-            total_researches: results[0].total_researches,
-            total_views: results[0].total_views,  // Add total views to the response
-        });
-    } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+      res.json({
+          total_downloads: results[0].total_downloads,
+          total_citations: results[0].total_citations,
+          total_researches: results[0].total_researches,
+          total_views: results[0].total_views,
+      });
+
+  } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      res.status(500).json({ message: 'Server error' });
+  }
 });
+
 
 
 
@@ -266,23 +270,44 @@ router.get('/user/daily/citations/:research_id', async (req, res) => {
 });
 
 // Get daily download counts for a specific uploader_id
-router.get('/user/daily/downloads/:research_id', async (req, res) => {
+router.get('/user/daily/downloads', async (req, res) => {
+  const userId = req.query.userId;
+
+  if (!userId) {
+      return res.status(400).send('User ID is required');
+  }
+
   try {
-    const userId = req.params.research_id;
-    const [results] = await db.query(`
-      SELECT DATE(d.datetime) AS date, COUNT(*) AS downloads
-      FROM downloads d
-      JOIN researches r ON d.research_id = r.research_id
-      WHERE r.uploader_id = ?
-      GROUP BY DATE(d.datetime)
-      ORDER BY DATE(d.datetime) ASC
-    `, [userId]);
-    res.json(results);
+      const [results] = await db.query(`
+          SELECT 
+              DAYOFWEEK(publish_date) AS day_of_week, 
+              SUM(downloadCount) AS downloads 
+          FROM downloads 
+          WHERE user_id = ? 
+          GROUP BY DAYOFWEEK(publish_date) 
+          ORDER BY DAYOFWEEK(publish_date) ASC
+      `, [userId]);
+
+      // Map day numbers to day names
+      const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      // Format the results to return day names
+      const formattedResults = Array(7).fill(0).map((_, index) => {
+          const result = results.find(row => row.day_of_week === index + 1);
+          return {
+              day: daysMapping[index], // Map day number to name
+              downloads: result ? result.downloads : 0 // Default to 0 if no data for that day
+          };
+      });
+
+      res.json(formattedResults);
+
   } catch (error) {
-    console.error('Error fetching daily downloads:', error);
-    res.status(500).send('Server error');
+      console.error('Error fetching daily downloads:', error);
+      res.status(500).send('Server error');
   }
 });
+
 
 // Get daily view counts for a specific uploader_id
 router.get('/user/daily/views/:research_id', async (req, res) => {
