@@ -8,23 +8,32 @@ const router = express.Router();
 
 // Citations Management
 // Increment citation count for each document
+// Increment citation count and log it to the citations table
 router.patch('/citations/:research_id', (req, res) => {
-
     const researchId = req.params.research_id;
 
-    // Update citation count in the database
-    const updateQuery = 'UPDATE researches SET citeCount = citeCount + 1 WHERE research_id = ?';
-
-    db.query(updateQuery, [researchId], (error, result) => {
-
+    // Insert a record into the citations table
+    const insertCitationQuery = 'INSERT INTO citations (research_id, citation_count) VALUES (?, 1)';
+    
+    db.query(insertCitationQuery, [researchId], (error, result) => {
         if (error) {
-            console.error('Error updating citation count:', error);
-            res.status(500).json({ error: 'An error occurred while updating citation count' });
+            console.error('Error logging citation:', error);
+            res.status(500).json({ error: 'An error occurred while logging citation' });
         } else {
-            res.status(200).json({ message: 'Citation count updated successfully' });
+            // Optionally, update the citation count in the researches table
+            const updateCiteQuery = 'UPDATE researches SET citeCount = citeCount + 1 WHERE research_id = ?';
+            db.query(updateCiteQuery, [researchId], (updateError) => {
+                if (updateError) {
+                    console.error('Error updating citation count:', updateError);
+                    res.status(500).json({ error: 'An error occurred while updating citation count' });
+                } else {
+                    res.status(200).json({ message: 'Citation logged and count updated successfully' });
+                }
+            });
         }
     });
 });
+
 
 // Get the citation count of a document
 router.get('/citations/:research_id', (req, res) => {
@@ -85,20 +94,28 @@ router.post('/total/citations', (req, res) => {
 
 
 // Increment download count for each document
+// Increment download count and log it to the downloads table
 router.post('/downloads/:research_id', (req, res) => {
-
     const researchId = req.params.research_id;
 
-    // Update citation count in the database
-    const updateQuery = 'UPDATE researches SET downloadCount = downloadCount + 1 WHERE research_id = ?';
-
-    db.query(updateQuery, [researchId], (error, result) => {
-
+    // Insert a record into the downloads table
+    const insertDownloadQuery = 'INSERT INTO downloads (research_id, download_count) VALUES (?, 1)';
+    
+    db.query(insertDownloadQuery, [researchId], (error, result) => {
         if (error) {
-            console.error('Error updating download count:', error);
-            res.status(500).json({ error: 'An error occurred while updating download count' });
+            console.error('Error logging download:', error);
+            res.status(500).json({ error: 'An error occurred while logging download' });
         } else {
-            res.status(200).json({ message: 'Download count updated successfully' });
+            // Optionally, update the download count in the researches table
+            const updateDownloadQuery = 'UPDATE researches SET downloadCount = downloadCount + 1 WHERE research_id = ?';
+            db.query(updateDownloadQuery, [researchId], (updateError) => {
+                if (updateError) {
+                    console.error('Error updating download count:', updateError);
+                    res.status(500).json({ error: 'An error occurred while updating download count' });
+                } else {
+                    res.status(200).json({ message: 'Download logged and count updated successfully' });
+                }
+            });
         }
     });
 });

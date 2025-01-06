@@ -516,24 +516,30 @@ router.get('/user/monthly/citations', async (req, res) => {
 
 
 
-router.post('/research/view/:research_id', async (req, res) => {
-    try {
-        const researchId = req.params.research_id;
+// Increment view count and log it to the views table
+router.post('/views/:research_id', (req, res) => {
+  const researchId = req.params.research_id;
 
-        // SQL query to increment the view count
-        const incrementViewQuery = 'UPDATE researches SET viewCount = viewCount + 1 WHERE research_id = ?';
-        const [result] = await db.query(incrementViewQuery, [researchId]);
-
-        // Check if the research article was found and updated
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Research not found' });
-        }
-
-        res.status(200).json({ message: 'View count updated successfully' });
-    } catch (error) {
-        console.error('Error updating view count:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+  // Insert a record into the views table
+  const insertViewQuery = 'INSERT INTO views (research_id) VALUES (?)';
+  
+  db.query(insertViewQuery, [researchId], (error, result) => {
+      if (error) {
+          console.error('Error logging view:', error);
+          res.status(500).json({ error: 'An error occurred while logging view' });
+      } else {
+          // Optionally, update the view count in the researches table (if you need the total count)
+          const updateViewQuery = 'UPDATE researches SET viewCount = viewCount + 1 WHERE research_id = ?';
+          db.query(updateViewQuery, [researchId], (updateError) => {
+              if (updateError) {
+                  console.error('Error updating view count:', updateError);
+                  res.status(500).json({ error: 'An error occurred while updating view count' });
+              } else {
+                  res.status(200).json({ message: 'View logged and count updated successfully' });
+              }
+          });
+      }
+  });
 });
 
 

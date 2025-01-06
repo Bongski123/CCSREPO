@@ -196,31 +196,48 @@ router.get("/researches/rejected", async (req, res) => {
 });
 
 // Route to get total downloads
-// Route to get total downloads
+// Get total citation count
+router.get('/total/citations', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT SUM(citation_count) AS total_citations
+      FROM citations
+    `);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total citations:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get total download count
 router.get('/total/downloads', async (req, res) => {
-    try {
-      let sql = 'SELECT SUM(downloadCount) AS total_downloads FROM researches';
-      const [result] = await db.query(sql);
-      res.json(result[0]);
-    } catch (err) {
-      res.status(500).send(err.message);
-    }
-  });
-  router.get('/user/research/:researchId/downloads', async (req, res) => {
-    const { researchId } = req.params; // Get the researchId from the request parameters
-    try {
-      const sql = 'SELECT SUM(downloadCount) AS total_downloads FROM researches WHERE research_id = ?'; // Change researchId if needed
-      const [result] = await db.query(sql, [researchId]); // Pass the researchId as a parameter
-      
-      if (result.length === 0) {
-        return res.status(404).send('Research not found.');
-      }
-      
-      res.json(result[0]); // Send the total downloads for the research
-    } catch (err) {
-      res.status(500).send(err.message);
-    }
-  });
+  try {
+    const [results] = await db.query(`
+      SELECT COUNT(*) AS total_downloads
+      FROM downloads
+    `);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get total view count
+router.get('/total/views', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT COUNT(*) AS total_views
+      FROM views
+    `);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total views:', error);
+    res.status(500).send('Server error');
+  }
+});
+
   
  // Route to get total citations
 router.get('/total/citations', async (req, res) => {
@@ -255,151 +272,231 @@ router.get('/total/researches', async (req, res) => {
       res.status(500).send(err.message);
     }
   });
-  
 
-// Increment download count
-router.post('/research/download/:research_id',  async (req, res) => {
-    try {
-        const researchId = req.params.research_id;
 
-        const incrementDownloadQuery = 'UPDATE researches SET downloadCount = downloadCount + 1 WHERE research_id = ?';
-        const [result] = await db.query(incrementDownloadQuery, [researchId]);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Research not found' });
-        }
 
-        res.status(200).json({ message: 'Download count updated successfully' });
-    } catch (error) {
-        console.error('Error updating download count:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+
+  // Increment download count and log it
+router.post('/research/download/:research_id', async (req, res) => {
+  try {
+      const researchId = req.params.research_id;
+
+      // Insert a new record into the downloads table
+      const insertDownloadQuery = 'INSERT INTO downloads (research_id, download_count) VALUES (?, 1)';
+      const [result] = await db.query(insertDownloadQuery, [researchId]);
+
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Research not found' });
+      }
+
+      // Optionally, update the total download count in the researches table
+      const incrementDownloadQuery = 'UPDATE researches SET downloadCount = downloadCount + 1 WHERE research_id = ?';
+      await db.query(incrementDownloadQuery, [researchId]);
+
+      res.status(200).json({ message: 'Download count updated successfully' });
+  } catch (error) {
+      console.error('Error updating download count:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-// Increment citation count
-router.post('/research/cite/:research_id',  async (req, res) => {
-    try {
-        const researchId = req.params.research_id;
+// Increment citation count and log it
+router.post('/research/cite/:research_id', async (req, res) => {
+  try {
+      const researchId = req.params.research_id;
 
-        const incrementCiteQuery = 'UPDATE researches SET citeCount = citeCount + 1 WHERE research_id = ?';
-        const [result] = await db.query(incrementCiteQuery, [researchId]);
+      // Insert a new record into the citations table
+      const insertCiteQuery = 'INSERT INTO citations (research_id, citation_count) VALUES (?, 1)';
+      const [result] = await db.query(insertCiteQuery, [researchId]);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Research not found' });
-        }
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Research not found' });
+      }
 
-        res.status(200).json({ message: 'Citation count updated successfully' });
-    } catch (error) {
-        console.error('Error updating citation count:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+      // Optionally, update the total citation count in the researches table
+      const incrementCiteQuery = 'UPDATE researches SET citeCount = citeCount + 1 WHERE research_id = ?';
+      await db.query(incrementCiteQuery, [researchId]);
+
+      res.status(200).json({ message: 'Citation count updated successfully' });
+  } catch (error) {
+      console.error('Error updating citation count:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
+// Increment view count and log it
+router.post('/research/view/:research_id', async (req, res) => {
+  try {
+      const researchId = req.params.research_id;
+
+      // Insert a new record into the views table
+      const insertViewQuery = 'INSERT INTO views (research_id, view_count) VALUES (?, 1)';
+      const [result] = await db.query(insertViewQuery, [researchId]);
+
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Research not found' });
+      }
+
+      // Optionally, update the total view count in the researches table
+      const incrementViewQuery = 'UPDATE researches SET viewCount = viewCount + 1 WHERE research_id = ?';
+      await db.query(incrementViewQuery, [researchId]);
+
+      res.status(200).json({ message: 'View count updated successfully' });
+  } catch (error) {
+      console.error('Error updating view count:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+  // Get daily citation counts
+router.get('/daily/citations', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT DATE(datetime) AS date, SUM(citation_count) AS citations
+      FROM citations
+      GROUP BY DATE(datetime)
+      ORDER BY DATE(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching daily citations:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get daily download counts
 router.get('/daily/downloads', async (req, res) => {
-    try {
-      const [results] = await db.query('SELECT DATE(publish_date) AS date, SUM(downloadCount) AS downloads FROM researches GROUP BY DATE(publish_date) ORDER BY DATE(publish_date) ASC');
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching daily downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
-  router.get('/daily/citations', async (req, res) => {
-    try {
-      // Adjust the query based on how you store citations in your database
-      const [results] = await db.query(
-        'SELECT DATE(publish_date) AS date, SUM(citeCount) AS citations FROM researches GROUP BY DATE(publish_date) ORDER BY DATE(publish_date) ASC'
-      );
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching daily citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
+  try {
+    const [results] = await db.query(`
+      SELECT DATE(datetime) AS date, COUNT(*) AS downloads
+      FROM downloads
+      GROUP BY DATE(datetime)
+      ORDER BY DATE(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching daily downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-
-
-
-  router.get('/weekly/downloads', async (req, res) => {
-    try {
-      const [results] = await db.query(`
-        SELECT 
-          YEAR(publish_date) AS year, 
-          WEEK(publish_date) AS week, 
-          SUM(downloadCount) AS downloads
-        FROM researches 
-        GROUP BY YEAR(publish_date), WEEK(publish_date)
-        ORDER BY YEAR(publish_date), WEEK(publish_date) ASC
-      `);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
-
-  router.get('/weekly/citations', async (req, res) => {
-    try {
-      const [results] = await db.query(`
-        SELECT 
-          YEAR(publish_date) AS year, 
-          WEEK(publish_date) AS week, 
-          SUM(citeCount) AS citations
-        FROM researches 
-        GROUP BY YEAR(publish_date), WEEK(publish_date)
-        ORDER BY YEAR(publish_date), WEEK(publish_date) ASC
-      `);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
+// Get daily view counts
+router.get('/daily/views', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT DATE(datetime) AS date, COUNT(*) AS views
+      FROM views
+      GROUP BY DATE(datetime)
+      ORDER BY DATE(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching daily views:', error);
+    res.status(500).send('Server error');
+  }
+});
 
   
-  router.get('/monthly/downloads', async (req, res) => {
-    try {
-      const [results] = await db.query(`
-        SELECT 
-          YEAR(publish_date) AS year, 
-          MONTH(publish_date) AS month, 
-          SUM(downloadCount) AS downloads
-        FROM researches 
-        GROUP BY YEAR(publish_date), MONTH(publish_date)
-        ORDER BY YEAR(publish_date), MONTH(publish_date) ASC
-      `);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching monthly downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
 
-  
-  router.get('/monthly/citations', async (req, res) => {
-    try {
-      const [results] = await db.query(`
-        SELECT 
-          YEAR(publish_date) AS year, 
-          MONTH(publish_date) AS month, 
-          SUM(citeCount) AS citations
-        FROM researches 
-        GROUP BY YEAR(publish_date), MONTH(publish_date)
-        ORDER BY YEAR(publish_date), MONTH(publish_date) ASC
-      `);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching monthly citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
-    
+// Get weekly citation counts
+router.get('/weekly/citations', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, WEEK(datetime) AS week, SUM(citation_count) AS citations
+      FROM citations
+      GROUP BY YEAR(datetime), WEEK(datetime)
+      ORDER BY YEAR(datetime), WEEK(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly citations:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get weekly download counts
+router.get('/weekly/downloads', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, WEEK(datetime) AS week, COUNT(*) AS downloads
+      FROM downloads
+      GROUP BY YEAR(datetime), WEEK(datetime)
+      ORDER BY YEAR(datetime), WEEK(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get weekly view counts
+router.get('/weekly/views', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, WEEK(datetime) AS week, COUNT(*) AS views
+      FROM views
+      GROUP BY YEAR(datetime), WEEK(datetime)
+      ORDER BY YEAR(datetime), WEEK(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly views:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+
+// Get monthly citation counts
+router.get('/monthly/citations', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, MONTH(datetime) AS month, SUM(citation_count) AS citations
+      FROM citations
+      GROUP BY YEAR(datetime), MONTH(datetime)
+      ORDER BY YEAR(datetime), MONTH(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching monthly citations:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get monthly download counts
+router.get('/monthly/downloads', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, MONTH(datetime) AS month, COUNT(*) AS downloads
+      FROM downloads
+      GROUP BY YEAR(datetime), MONTH(datetime)
+      ORDER BY YEAR(datetime), MONTH(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching monthly downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get monthly view counts
+router.get('/monthly/views', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT YEAR(datetime) AS year, MONTH(datetime) AS month, COUNT(*) AS views
+      FROM views
+      GROUP BY YEAR(datetime), MONTH(datetime)
+      ORDER BY YEAR(datetime), MONTH(datetime) ASC
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching monthly views:', error);
+    res.status(500).send('Server error');
+  }
+});
+
 
 
 
