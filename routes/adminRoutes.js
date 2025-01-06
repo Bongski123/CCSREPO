@@ -147,9 +147,9 @@ router.get("/researches", async (req, res) => {
              r.status,
              GROUP_CONCAT(DISTINCT a.author_name) AS authors,
              GROUP_CONCAT(DISTINCT a.email) AS authors_emails,
-             COALESCE(SUM(d.downloadCount), 0) AS total_downloads,
-             COALESCE(SUM(c.citeCount), 0) AS total_citations,
-             COALESCE(SUM(v.viewCount), 0) AS total_views
+             COALESCE(SUM(d.download_count), 0) AS total_downloads,
+             COALESCE(SUM(c.citation_count), 0) AS total_citations,
+             COALESCE(SUM(v.view_count), 0) AS total_views
       FROM researches r
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
