@@ -260,7 +260,7 @@ router.get('/total/views/:research_id', async (req, res) => {
     const [results] = await db.query(`
       SELECT COUNT(*) AS total_views
       FROM views v
-      JOIN researches r ON d.research_id = r.research_id
+      JOIN researches r ON v.research_id = r.research_id
       WHERE r.uploader_id = ?
     `, [userId]);
     res.json(results[0]);
