@@ -210,293 +210,211 @@ router.get('/user/dashboard', async (req, res) => {
 });
 
 
-// Route to get daily downloads for an individual uploader
-router.get('/user/total/downloads', async (req, res) => {
-    const userId = req.query.userId; // Get the userId from the query parameters
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT DATE(publish_date) AS date, SUM(downloadCount) AS downloads 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY DATE(publish_date) 
-        ORDER BY DATE(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching daily downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
-// Route to get daily downloads for an individual uploader (grouped by day of the week)
-router.get('/user/daily/downloads', async (req, res) => {
-  const userId = req.query.userId;
-
-  if (!userId) {
-    return res.status(400).send('User ID is required');
-  }
-
+// Get total citations for a specific uploader_id
+router.get('/total/citations/:research_id', async (req, res) => {
   try {
+    const userId = req.params.research_id;
     const [results] = await db.query(`
-      SELECT 
-        DAYOFWEEK(publish_date) AS day_of_week, 
-        SUM(downloadCount) AS downloads 
-      FROM researches 
-      WHERE uploader_id = ? 
-      GROUP BY DAYOFWEEK(publish_date) 
-      ORDER BY DAYOFWEEK(publish_date) ASC
+      SELECT SUM(c.citation_count) AS total_citations
+      FROM citations c
+      JOIN researches r ON c.research_id = r.research_id
+      WHERE r.uploader_id = ?
     `, [userId]);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total citations:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-    // Map day numbers to day names
-    const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Get total downloads for a specific uploader_id
+router.get('/total/downloads/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT COUNT(*) AS total_downloads
+      FROM downloads d
+      JOIN researches r ON d.research_id = r.research_id
+      WHERE r.uploader_id = ?
+    `, [userId]);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-    // Format the results to return day names
-    const formattedResults = Array(7).fill(0).map((_, index) => {
-      const result = results.find(row => row.day_of_week === index + 1);
-      return {
-        day: daysMapping[index], // Map day number to name
-        downloads: result ? result.downloads : 0 // Default to 0 if no data for that day
-      };
-    });
+// Get daily citation counts for a specific uploader_id
+router.get('/daily/citations/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT DATE(c.datetime) AS date, SUM(c.citation_count) AS citations
+      FROM citations c
+      JOIN researches r ON c.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY DATE(c.datetime)
+      ORDER BY DATE(c.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching daily citations:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-    res.json(formattedResults);
+// Get daily download counts for a specific uploader_id
+router.get('/daily/downloads/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT DATE(d.datetime) AS date, COUNT(*) AS downloads
+      FROM downloads d
+      JOIN researches r ON d.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY DATE(d.datetime)
+      ORDER BY DATE(d.datetime) ASC
+    `, [userId]);
+    res.json(results);
   } catch (error) {
     console.error('Error fetching daily downloads:', error);
     res.status(500).send('Server error');
   }
 });
 
-
-
-
-// Route to get weekly downloads for an individual uploader
-router.get('/user/weekly/downloads', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT WEEK(publish_date) AS week, SUM(downloadCount) AS downloads 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY WEEK(publish_date) 
-        ORDER BY WEEK(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
- 
-  // Route to get monthly downloads for an individual uploader
-  router.get('/user/monthly/downloads', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT MONTH(publish_date) AS month, SUM(downloadCount) AS downloads 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY MONTH(publish_date) 
-        ORDER BY MONTH(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching monthly downloads:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
-  // Route to get monthly citations for an individual uploader
-  router.get('/user/daily/citations', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT 
-          DAYOFWEEK(publish_date) AS day_of_week, 
-          SUM(citeCount) AS citations 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY DAYOFWEEK(publish_date) 
-        ORDER BY DAYOFWEEK(publish_date) ASC
-      `, [userId]);
-  
-      // Format the results for better readability
-      const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const formattedResults = results.map(row => ({
-        day: daysMapping[row.day_of_week - 1], // DAYOFWEEK returns 1 (Sunday) to 7 (Saturday)
-        citations: row.citations
-      }));
-  
-      res.json(formattedResults);
-    } catch (error) {
-      console.error('Error fetching daily citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
-
-   // Route to get weekly citations for an individual uploader
-   router.get('/user/weekly/citations', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT WEEK(publish_date) AS week, SUM(citeCount) AS citations 
-        FROM researches 
-        WHERE uploader_id = ? 
-        GROUP BY WEEK(publish_date) 
-        ORDER BY WEEK(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly citations:', error);
-      res.status(500).send('Server error');
-    }
-  });
-
-   // Route to get monthly citations for an individual uploader
-router.get('/user/monthly/citations', async (req, res) => {
-  const userId = req.query.userId;
-
-  if (!userId) {
-    return res.status(400).send('User ID is required');
-  }
-
+// Get daily view counts for a specific uploader_id
+router.get('/daily/views/:research_id', async (req, res) => {
   try {
+    const userId = req.params.research_id;
     const [results] = await db.query(`
-      SELECT 
-        MONTH(publish_date) AS month, 
-        YEAR(publish_date) AS year, 
-        SUM(citeCount) AS citations 
-      FROM researches 
-      WHERE uploader_id = ? 
-      GROUP BY year, month 
-      ORDER BY year ASC, month ASC
+      SELECT DATE(v.datetime) AS date, COUNT(*) AS views
+      FROM views v
+      JOIN researches r ON v.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY DATE(v.datetime)
+      ORDER BY DATE(v.datetime) ASC
     `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching daily views:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-    // Format the results to return month names
-    const monthsMapping = [
-      'January', 'February', 'March', 'April', 'May', 'June', 
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const formattedResults = results.map(row => ({
-      month: monthsMapping[row.month - 1],
-      year: row.year,
-      citations: row.citations
-    }));
+// Get weekly citation counts for a specific uploader_id
+router.get('/weekly/citations/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(c.datetime) AS year, WEEK(c.datetime) AS week, SUM(c.citation_count) AS citations
+      FROM citations c
+      JOIN researches r ON c.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(c.datetime), WEEK(c.datetime)
+      ORDER BY YEAR(c.datetime), WEEK(c.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly citations:', error);
+    res.status(500).send('Server error');
+  }
+});
 
-    res.json(formattedResults);
+// Get weekly download counts for a specific uploader_id
+router.get('/weekly/downloads/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(d.datetime) AS year, WEEK(d.datetime) AS week, COUNT(*) AS downloads
+      FROM downloads d
+      JOIN researches r ON d.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(d.datetime), WEEK(d.datetime)
+      ORDER BY YEAR(d.datetime), WEEK(d.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get weekly view counts for a specific uploader_id
+router.get('/weekly/views/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(v.datetime) AS year, WEEK(v.datetime) AS week, COUNT(*) AS views
+      FROM views v
+      JOIN researches r ON v.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(v.datetime), WEEK(v.datetime)
+      ORDER BY YEAR(v.datetime), WEEK(v.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching weekly views:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get monthly citation counts for a specific uploader_id
+router.get('/monthly/citations/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(c.datetime) AS year, MONTH(c.datetime) AS month, SUM(c.citation_count) AS citations
+      FROM citations c
+      JOIN researches r ON c.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(c.datetime), MONTH(c.datetime)
+      ORDER BY YEAR(c.datetime), MONTH(c.datetime) ASC
+    `, [userId]);
+    res.json(results);
   } catch (error) {
     console.error('Error fetching monthly citations:', error);
     res.status(500).send('Server error');
   }
 });
-  
-  
-  // New route for daily views
-  router.get('/user/daily/views', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT DAYOFWEEK(publish_date) AS day_of_week, SUM(viewCount) AS views
-        FROM researches
-        WHERE uploader_id = ?
-        GROUP BY DAYOFWEEK(publish_date)
-        ORDER BY DAYOFWEEK(publish_date) ASC
-      `, [userId]);
-  
-      // Map the numeric day_of_week (1=Sunday, 7=Saturday) to day names (Sunday, Monday, etc.)
-      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const mappedResults = results.map(item => ({
-        day: daysOfWeek[item.day_of_week - 1], // Adjust for Day of Week (1=Sunday, 7=Saturday)
-        views: item.views
-      }));
-  
-      res.json(mappedResults);
-    } catch (error) {
-      console.error('Error fetching daily views:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  
 
- 
-  router.get('/user/weekly/views', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT WEEK(publish_date) AS week, YEAR(publish_date) AS year, SUM(viewCount) AS views
-        FROM researches
-        WHERE uploader_id = ?
-        GROUP BY WEEK(publish_date), YEAR(publish_date)
-        ORDER BY YEAR(publish_date) ASC, WEEK(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching weekly views:', error);
-      res.status(500).send('Server error');
-    }
-  });
-  router.get('/user/monthly/views', async (req, res) => {
-    const userId = req.query.userId;
-  
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-  
-    try {
-      const [results] = await db.query(`
-        SELECT MONTH(publish_date) AS month, YEAR(publish_date) AS year, SUM(viewCount) AS views
-        FROM researches
-        WHERE uploader_id = ?
-        GROUP BY MONTH(publish_date), YEAR(publish_date)
-        ORDER BY YEAR(publish_date) ASC, MONTH(publish_date) ASC
-      `, [userId]);
-  
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching monthly views:', error);
-      res.status(500).send('Server error');
-    }
-  });
+// Get monthly download counts for a specific uploader_id
+router.get('/monthly/downloads/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(d.datetime) AS year, MONTH(d.datetime) AS month, COUNT(*) AS downloads
+      FROM downloads d
+      JOIN researches r ON d.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(d.datetime), MONTH(d.datetime)
+      ORDER BY YEAR(d.datetime), MONTH(d.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching monthly downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get monthly view counts for a specific uploader_id
+router.get('/monthly/views/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT YEAR(v.datetime) AS year, MONTH(v.datetime) AS month, COUNT(*) AS views
+      FROM views v
+      JOIN researches r ON v.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY YEAR(v.datetime), MONTH(v.datetime)
+      ORDER BY YEAR(v.datetime), MONTH(v.datetime) ASC
+    `, [userId]);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching monthly views:', error);
+    res.status(500).send('Server error');
+  }
+});
+
     
   
 
@@ -516,31 +434,7 @@ router.get('/user/monthly/citations', async (req, res) => {
 
 
 
-// Increment view count and log it to the views table
-router.post('/views/:research_id', (req, res) => {
-  const researchId = req.params.research_id;
 
-  // Insert a record into the views table
-  const insertViewQuery = 'INSERT INTO views (research_id) VALUES (?)';
-  
-  db.query(insertViewQuery, [researchId], (error, result) => {
-      if (error) {
-          console.error('Error logging view:', error);
-          res.status(500).json({ error: 'An error occurred while logging view' });
-      } else {
-          // Optionally, update the view count in the researches table (if you need the total count)
-          const updateViewQuery = 'UPDATE researches SET viewCount = viewCount + 1 WHERE research_id = ?';
-          db.query(updateViewQuery, [researchId], (updateError) => {
-              if (updateError) {
-                  console.error('Error updating view count:', updateError);
-                  res.status(500).json({ error: 'An error occurred while updating view count' });
-              } else {
-                  res.status(200).json({ message: 'View logged and count updated successfully' });
-              }
-          });
-      }
-  });
-});
 
 
 
