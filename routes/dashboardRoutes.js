@@ -62,7 +62,7 @@ router.get('/trending-searches', async (req, res) => {
         COALESCE(GROUP_CONCAT(DISTINCT c.category_name ORDER BY c.category_name), 'Uncategorized') AS category,
         COALESCE(GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.keyword_name), 'No Keywords') AS keywords,
         COALESCE(sl.search_count, 0) AS searchCount,
-        COALESCE(SUM(d.downloadCount), 0) AS totalDownloads,  -- Summing total downloads
+        COALESCE(SUM(d.download_count), 0) AS totalDownloads,  -- Summing total downloads
         COALESCE(SUM(v.view_count), 0) AS totalViews  -- Summing total views
       FROM 
         researches r
