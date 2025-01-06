@@ -179,41 +179,45 @@ router.delete('/collection/remove/:userId/:researchId', async (req, res) => {
 
 // Endpoint to fetch total downloads, citations, and researches for a specific uploader
 router.get('/user/dashboard', async (req, res) => {
-  const userId = req.query.user_id;
-  if (!userId) {
-      return res.status(400).json({ message: 'User ID not provided.' });
-  }
-
   try {
-      const query = `SELECT 
-          COALESCE(SUM(r.downloadCount), 0) AS total_downloads,
-          COALESCE(SUM(r.citeCount), 0) AS total_citations,
+    // Get user_id from the query parameters
+    const userId = req.query.user_id;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID not provided.' });
+    }
+
+    // Query to fetch total downloads, citations, views, and researches for the user
+    const [results] = await db.query(`
+      SELECT 
+          COALESCE(SUM(d.downloadCount), 0) AS total_downloads,
+          COALESCE(SUM(c.citation_count), 0) AS total_citations,
           COALESCE(COUNT(r.research_id), 0) AS total_researches,
-          COALESCE(SUM(r.viewCount), 0) AS total_views  
-          FROM researches r
-          WHERE r.uploader_id = ?`;
+          COALESCE(SUM(v.viewCount), 0) AS total_views
+      FROM researches r
+      LEFT JOIN downloads d ON r.research_id = d.research_id
+      LEFT JOIN citations c ON r.research_id = c.research_id
+      LEFT JOIN views v ON r.research_id = v.research_id
+      WHERE r.uploader_id = ?
+    `, [userId]);
 
-      const [results] = await db.query(query, [userId]);
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'No data found for the provided user ID.' });
+    }
 
-      if (results.length === 0) {
-          return res.status(404).json({ message: 'No data found for the provided user ID.' });
-      }
-
-      res.json({
-          total_downloads: results[0].total_downloads,
-          total_citations: results[0].total_citations,
-          total_researches: results[0].total_researches,
-          total_views: results[0].total_views,
-      });
+    // Send the data in the response
+    res.json({
+      total_downloads: results[0].total_downloads,
+      total_citations: results[0].total_citations,
+      total_researches: results[0].total_researches,
+      total_views: results[0].total_views
+    });
 
   } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching dashboard data:', error.message);
+    res.status(500).json({ message: 'Server error' });
   }
 });
-
-
-
 
 
 // Get total citations for a specific uploader_id
@@ -250,6 +254,22 @@ router.get('/total/downloads/:research_id', async (req, res) => {
   }
 });
 
+router.get('/total/views/:research_id', async (req, res) => {
+  try {
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT COUNT(*) AS total_views
+      FROM views v
+      JOIN researches r ON d.research_id = r.research_id
+      WHERE r.uploader_id = ?
+    `, [userId]);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total downloads:', error);
+    res.status(500).send('Server error');
+  }
+});
+
 // Get daily citation counts for a specific uploader_id
 router.get('/user/daily/citations/:research_id', async (req, res) => {
   try {
@@ -270,41 +290,21 @@ router.get('/user/daily/citations/:research_id', async (req, res) => {
 });
 
 // Get daily download counts for a specific uploader_id
-router.get('/user/daily/downloads', async (req, res) => {
-  const userId = req.query.userId;
-
-  if (!userId) {
-      return res.status(400).send('User ID is required');
-  }
-
+router.get('/user/daily/downloads/:research_id', async (req, res) => {
   try {
-      const [results] = await db.query(`
-          SELECT 
-              DAYOFWEEK(publish_date) AS day_of_week, 
-              SUM(downloadCount) AS downloads 
-          FROM downloads 
-          WHERE user_id = ? 
-          GROUP BY DAYOFWEEK(publish_date) 
-          ORDER BY DAYOFWEEK(publish_date) ASC
-      `, [userId]);
-
-      // Map day numbers to day names
-      const daysMapping = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-      // Format the results to return day names
-      const formattedResults = Array(7).fill(0).map((_, index) => {
-          const result = results.find(row => row.day_of_week === index + 1);
-          return {
-              day: daysMapping[index], // Map day number to name
-              downloads: result ? result.downloads : 0 // Default to 0 if no data for that day
-          };
-      });
-
-      res.json(formattedResults);
-
+    const userId = req.params.research_id;
+    const [results] = await db.query(`
+      SELECT DATE(c.datetime) AS date, SUM(c.download_count) AS citations
+      FROM downloads c
+      JOIN researches r ON c.research_id = r.research_id
+      WHERE r.uploader_id = ?
+      GROUP BY DATE(c.datetime)
+      ORDER BY DATE(c.datetime) ASC
+    `, [userId]);
+    res.json(results);
   } catch (error) {
-      console.error('Error fetching daily downloads:', error);
-      res.status(500).send('Server error');
+    console.error('Error fetching daily citations:', error);
+    res.status(500).send('Server error');
   }
 });
 
