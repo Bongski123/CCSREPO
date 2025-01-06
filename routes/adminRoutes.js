@@ -137,23 +137,34 @@ router.get('/research/:research_id', async (req, res) => {
 // View all researches
 router.get("/researches", async (req, res) => {
   try {
-    const [researches] = await db.query(`SELECT r.research_id, r.title, r.publish_date, r.abstract, r.filename, r.status, 
-             r.viewCount, r.downloadCount, r.citeCount,
+    // Query to get research details along with download, citation, and view counts
+    const [researches] = await db.query(`
+      SELECT r.research_id, 
+             r.title, 
+             r.publish_date, 
+             r.abstract, 
+             r.filename, 
+             r.status,
              GROUP_CONCAT(a.author_name) AS authors,
-              GROUP_CONCAT(a.email) AS authors_emails
+             GROUP_CONCAT(a.email) AS authors_emails,
+             COALESCE(SUM(d.download_count), 0) AS total_downloads,
+             COALESCE(SUM(c.citation_count), 0) AS total_citations,
+             COALESCE(SUM(v.view_count), 0) AS total_views
       FROM researches r
       LEFT JOIN research_authors ra ON r.research_id = ra.research_id
       LEFT JOIN authors a ON ra.author_id = a.author_id
-      GROUP BY r.research_id`);
+      LEFT JOIN downloads d ON r.research_id = d.research_id
+      LEFT JOIN citations c ON r.research_id = c.research_id
+      LEFT JOIN views v ON r.research_id = v.research_id
+      GROUP BY r.research_id
+    `);
+
     res.status(200).json(researches);
   } catch (error) {
     console.error("Error getting researches:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while getting researches" });
+    res.status(500).json({ error: "An error occurred while getting researches" });
   }
-}); 
-
+});
 
 
 router.get("/researches/rejected", async (req, res) => {
