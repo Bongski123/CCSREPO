@@ -220,6 +220,22 @@ router.get('/user/dashboard', async (req, res) => {
 });
 
 
+router.get('/total/researches/:user_id', async (req, res) => {
+  try {
+    const userId = req.params.user_id;
+    const [results] = await db.query(`
+      SELECT COUNT(*) AS total_researches
+      FROM researches r
+      WHERE r.uploader_id = ?
+    `, [userId]);
+    res.json(results[0]);
+  } catch (error) {
+    console.error('Error fetching total researches:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+
 // Get total citations for a specific uploader_id
 router.get('/total/citations/:research_id', async (req, res) => {
   try {
