@@ -310,12 +310,12 @@ router.get('/user/daily/downloads/:research_id', async (req, res) => {
   try {
     const userId = req.params.research_id;
     const [results] = await db.query(`
-      SELECT DATE(c.datetime) AS date, SUM(c.download_count) AS citations
-      FROM downloads c
-      JOIN researches r ON c.research_id = r.research_id
+      SELECT DATE(d.datetime) AS date, SUM(d.download_count) AS downloads
+      FROM downloads d
+      JOIN researches r ON d.research_id = r.research_id
       WHERE r.uploader_id = ?
-      GROUP BY DATE(c.datetime)
-      ORDER BY DATE(c.datetime) ASC
+      GROUP BY DATE(d.datetime)
+      ORDER BY DATE(d.datetime) ASC
     `, [userId]);
     res.json(results);
   } catch (error) {
