@@ -279,53 +279,49 @@ router.get('/total/researches', async (req, res) => {
 
 
 
-  // Increment download count and log it
+// Import necessary modules and configure your database connection (db) before defining routes.
+
 router.post('/research/download/:research_id', async (req, res) => {
   try {
-      const researchId = req.params.research_id;
+    const researchId = req.params.research_id;
 
-      // Insert a new record into the downloads table
-      const insertDownloadQuery = 'INSERT INTO downloads (research_id, download_count) VALUES (?, 1)';
-      const [result] = await db.query(insertDownloadQuery, [researchId]);
+    // Insert a new record into the downloads table for tracking
+    const insertDownloadQuery = 'INSERT INTO downloads (research_id, download_count) VALUES (?, 1)';
+    const [insertDownloadResult] = await db.query(insertDownloadQuery, [researchId]);
 
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ error: 'Research not found' });
-      }
+    if (insertDownloadResult.affectedRows === 0) {
+      return res.status(404).json({ error: 'Research not found' });
+    }
 
-      // Optionally, update the total download count in the researches table
-      const incrementDownloadQuery = 'UPDATE researches SET downloadCount = downloadCount + 1 WHERE research_id = ?';
-      await db.query(incrementDownloadQuery, [researchId]);
 
-      res.status(200).json({ message: 'Download count updated successfully' });
+    res.status(200).json({ message: 'Download count updated successfully' });
   } catch (error) {
-      console.error('Error updating download count:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error updating download count:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 // Increment citation count and log it
 router.post('/research/cite/:research_id', async (req, res) => {
   try {
-      const researchId = req.params.research_id;
+    const researchId = req.params.research_id;
 
-      // Insert a new record into the citations table
-      const insertCiteQuery = 'INSERT INTO citations (research_id, citation_count) VALUES (?, 1)';
-      const [result] = await db.query(insertCiteQuery, [researchId]);
+    // Insert a new record into the citations table for tracking
+    const insertCiteQuery = 'INSERT INTO citations (research_id, citation_count) VALUES (?, 1)';
+    const [insertCiteResult] = await db.query(insertCiteQuery, [researchId]);
 
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ error: 'Research not found' });
-      }
+    if (insertCiteResult.affectedRows === 0) {
+      return res.status(404).json({ error: 'Research not found' });
+    }
 
-      // Optionally, update the total citation count in the researches table
-      const incrementCiteQuery = 'UPDATE researches SET citeCount = citeCount + 1 WHERE research_id = ?';
-      await db.query(incrementCiteQuery, [researchId]);
 
-      res.status(200).json({ message: 'Citation count updated successfully' });
+    res.status(200).json({ message: 'Citation count updated successfully' });
   } catch (error) {
-      console.error('Error updating citation count:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error updating citation count:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 // Increment view count and log it
 router.post('/research/view/:research_id', async (req, res) => {
