@@ -204,7 +204,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// DELETE research and associated records
 router.delete('/delete-research/:research_id', async (req, res) => {
   const research_id = req.params.research_id;
 
@@ -212,31 +211,18 @@ router.delete('/delete-research/:research_id', async (req, res) => {
       return res.status(400).json({ message: 'Research ID is required.' });
   }
 
-  // Start a transaction
-  const connection = await db.getConnection(); // Assuming you're using a connection pool
-  await connection.beginTransaction();
-
   try {
-      // Delete associated records from additional tables
-      await connection.query("DELETE FROM search_logs WHERE research_id = ?", [research_id]);
-      await connection.query("DELETE FROM collections WHERE research_id = ?", [research_id]);
-      await connection.query("DELETE FROM notifications WHERE research_id = ?", [research_id]);
-      
-      // Delete records from existing tables
-      await connection.query("DELETE FROM research_authors WHERE research_id = ?", [research_id]);
-      await connection.query("DELETE FROM research_categories WHERE research_id = ?", [research_id]);
-      await connection.query("DELETE FROM research_keywords WHERE research_id = ?", [research_id]);
-      await connection.query("DELETE FROM researches WHERE research_id = ?", [research_id]);
+      // Delete research entry, cascading to related tables
+      const [result] = await db.query("DELETE FROM researches WHERE research_id = ?", [research_id]);
 
-      // Commit the transaction
-      await connection.commit();
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ message: 'Research not found.' });
+      }
+
       res.status(200).json({ message: 'Research and associated records deleted successfully!' });
   } catch (err) {
-      await connection.rollback(); // Rollback if error occurs
       console.error(err);
-      res.status(500).json({ error: 'An error occurred while deleting the research and associated records' });
-  } finally {
-      connection.release(); // Release the connection
+      res.status(500).json({ error: 'An error occurred while deleting the research.' });
   }
 });
 
