@@ -142,7 +142,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Save research metadata to RestDB
-    const restDBUrl = "https/www-ccsnexus-3c3f.restdb.io/restdb-research"; // Replace with your RestDB URL
+    const restDBUrl = "https://www-ccsnexus-3c3f.restdb.io/rest/researches"; // Replace with your RestDB URL
     const restDBApiKey = "67862dcf630e8a43060b142e"; // Replace with your RestDB API Key
     const researchMetadata = {
       title,
