@@ -68,6 +68,8 @@ const bufferToStream = (buffer) => {
   return readable;
 };
 
+const axios = require('axios'); // Import axios for making HTTP requests
+
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file || req.file.mimetype !== "application/pdf") {
@@ -76,133 +78,140 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
 
-    // Validate input fields
-    if (!authors) return res.status(400).json({ error: "Authors are required!" });
-    if (!categories) return res.status(400).json({ error: "Categories are required!" });
-    if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
+    if (!authors || !categories || !keywords) {
+      return res.status(400).json({ error: "All fields (authors, categories, keywords) are required!" });
+    }
 
-    // Split authors into an array of objects containing author_name and email
-    const authorList = authors
-  ? authors.split(',').map(author => {
-      // Match the format "name (email)"
-      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/); // Regex to capture name and email
-      if (!match) {
-        console.warn(`Invalid author format for: ${author}`);
-        return null; // or handle however you'd like
-      }
-      const [, author_name, email] = match;
-      return { 
-        author_name: author_name.trim(), 
-        email: email.trim()
-      };
-  }).filter(author => author !== null) // Remove any invalid entries
-  : [];
+    const authorList = parseAuthors(authors);
+    const categoryList = categories.split(',').map(c => c.trim());
+    const keywordList = keywords.split(',').map(k => k.trim());
 
-    const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
-    const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
+    const fileMetadata = { name: req.file.originalname, parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"] };
+    const media = { mimeType: req.file.mimetype, body: bufferToStream(req.file.buffer) };
 
-    // Upload file to Google Drive
-    const fileMetadata = {
-      name: req.file.originalname, // Use the original file name
-      parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
-    };
-    const media = {
-      mimeType: req.file.mimetype,
-      body: bufferToStream(req.file.buffer),
-    };
-
-    const driveResponse = await drive.files.create({
-      resource: fileMetadata,
-      media,
-      fields: "id",
-    });
-
+    const driveResponse = await drive.files.create({ resource: fileMetadata, media, fields: "id" });
     const fileId = driveResponse.data.id;
 
-    // Validate uploader_id
     if (!uploader_id || isNaN(uploader_id)) {
       return res.status(400).json({ error: "Invalid uploader ID!" });
     }
 
-    // Check the roleId of the uploader
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
-    if (uploader.length === 0) {
-      return res.status(404).json({ error: "Uploader not found!" });
-    }
+    if (uploader.length === 0) return res.status(404).json({ error: "Uploader not found!" });
 
     const role_id = uploader[0].role_id;
+    const status = role_id === 1 ? "approved" : "pending";
 
-    // Set the default status
-    let status = role_id === 1 ? "approved" : "pending";
-
-    // Check if title already exists
     const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
     if (existingDocument.length > 0) {
       return res.status(409).json({ error: "Document with this title already exists!" });
     }
 
-    // Insert research with the file ID from Google Drive
-    const [result] = await db.query(
-      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)", 
-      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
+    await db.beginTransaction();
+
+    const [researchResult] = await db.query(
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]
     );
-    
-    const researchId = result.insertId;
 
-    // Insert authors into the authors table and associate with the research
-    const insertAuthors = async (researchId, authors) => {
-      for (const { author_name, email } of authors) {
-        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [author_name, email]);
-        if (authorRecord.length === 0) {
-            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [author_name, email]);
-            authorRecord = { author_id: result.insertId };
-        } else {
-            authorRecord = authorRecord[0];
-        }
-        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, authorRecord.author_id]);
-      }
+    const researchId = researchResult.insertId;
+
+    await Promise.all([
+      insertAuthors(researchId, authorList),
+      insertCategories(researchId, categoryList),
+      insertKeywords(researchId, keywordList),
+    ]);
+
+    await db.commit();
+
+    // Prepare data for RestDB
+    const restDbData = {
+      title,
+      authors: authorList,
+      categories: categoryList,
+      keywords: keywordList,
+      abstract,
+      uploader_id,
+      status,
+      file_id: fileId,
+      filename: req.file.originalname,
+      publish_date: new Date().toISOString(),
     };
 
-    await insertAuthors(researchId, authorList);
+    // Send data to RestDB
+    const restDbResponse = await axios.post("https://www-ccsnexus-3c3f.restdb.io/restdb-researches", restDbData, {
+      headers: {
+        "x-apikey": "10de4bbb0fbd2a5ddd74f21ff76bae188fc02",
+        "Content-Type": "application/json",
+      },
+    });
 
-    // Insert categories
-    const insertCategories = async (researchId, categories) => {
-      for (const name of categories) {
-          let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
-          if (category.length === 0) {
-              const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
-              category = { category_id: result.insertId };
-          } else {
-              category = category[0];
-          }
-          await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
-      }
-    };
+    if (restDbResponse.status !== 201) {
+      console.warn("Failed to insert into RestDB:", restDbResponse.data);
+      return res.status(500).json({ error: "Failed to save data in RestDB!" });
+    }
 
-    await insertCategories(researchId, categoryList);
-
-    // Insert keywords
-    const insertKeywords = async (researchId, keywords) => {
-      for (const name of keywords) {
-          let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
-          if (keyword.length === 0) {
-              const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
-              keyword = { keyword_id: result.insertId };
-          } else {
-              keyword = keyword[0];
-          }
-          await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
-      }
-    };
-
-    await insertKeywords(researchId, keywordList);
-
-    res.status(201).json({ message: "Research uploaded successfully!" });
+    res.status(201).json({ message: "Research uploaded successfully to MySQL and RestDB!" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "An error occurred while uploading the research" });
+    await db.rollback();
+    res.status(500).json({ error: "An error occurred while uploading the research." });
   }
 });
+
+function parseAuthors(authors) {
+  return authors
+    .split(',')
+    .map(author => {
+      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/);
+      if (match) {
+        const [, name, email] = match;
+        return { author_name: name.trim(), email: email.trim() };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+async function insertAuthors(researchId, authors) {
+  for (const { author_name, email } of authors) {
+    let [author] = await db.query("SELECT author_id FROM authors WHERE author_name = ? AND email = ?", [author_name, email]);
+    if (author.length === 0) {
+      const [result] = await db.query("INSERT INTO authors (author_name, email) VALUES (?, ?)", [author_name, email]);
+      author = { author_id: result.insertId };
+    } else {
+      author = author[0];
+    }
+    await db.query("INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)", [researchId, author.author_id]);
+  }
+}
+
+async function insertCategories(researchId, categories) {
+  for (const name of categories) {
+    let [category] = await db.query("SELECT category_id FROM category WHERE category_name = ?", [name]);
+    if (category.length === 0) {
+      const [result] = await db.query("INSERT INTO category (category_name) VALUES (?)", [name]);
+      category = { category_id: result.insertId };
+    } else {
+      category = category[0];
+    }
+    await db.query("INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)", [researchId, category.category_id]);
+  }
+}
+
+async function insertKeywords(researchId, keywords) {
+  for (const name of keywords) {
+    let [keyword] = await db.query("SELECT keyword_id FROM keywords WHERE keyword_name = ?", [name]);
+    if (keyword.length === 0) {
+      const [result] = await db.query("INSERT INTO keywords (keyword_name) VALUES (?)", [name]);
+      keyword = { keyword_id: result.insertId };
+    } else {
+      keyword = keyword[0];
+    }
+    await db.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)", [researchId, keyword.keyword_id]);
+  }
+}
+
 
 router.delete('/delete-research/:research_id', async (req, res) => {
   const research_id = req.params.research_id;
