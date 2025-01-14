@@ -1,37 +1,73 @@
 const express = require("express");
 const { google } = require("googleapis");
 const multer = require("multer");
-const { Readable } = require("stream");
+const { Readable } = require('stream');
+const fs = require("fs");
+const path = require("path");
 const db = require("../database/db");
-const axios = require("axios");
+
 
 const router = express.Router();
 
-// Google Drive service account configuration (loaded from environment variables)
+
 const googleServiceAccount = {
-  type: process.env.GOOGLE_TYPE,
-  project_id: process.env.GOOGLE_PROJECT_ID,
-  private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-  private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-  client_email: process.env.GOOGLE_CLIENT_EMAIL,
-  client_id: process.env.GOOGLE_CLIENT_ID,
-  auth_uri: process.env.GOOGLE_AUTH_URI,
-  token_uri: process.env.GOOGLE_TOKEN_URI,
-  auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_CERT_URL,
-  client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL,
+  type: "service_account",
+  project_id: "ccsrepository-444308",
+  private_key_id: "ad95bb0e9b7b40f9b43b2dd9dc33cc3eb925bce9",
+  private_key: `-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDVgISVob0EV2BE
+T0NXxB6R/TCLwgZzGG3ivK7uzoIJoGQPKLSkABLu0/3GNdwMx4ZEOOsEr+EMyUhp
+8LMj9iik9mOyb+R4kEDAEQlQZ0+HvK/Yabm67umX/6dGRv7JCC+yNRP28XQ9GuOU
+SmmhEqnmmga2lWp+mPBl6W6nX7gOAIj6xtugYU1IRAIZ0Yxs8eVTp5y4mh7sWqko
+xXUmkSCcLY6Wm1zlR8yHTExSL/QPmnWUNyOqyIg6bvRq3nAwYdGLUZRoTa1TWnQO
+ewqa1GM9aouAI0d+RsCw//UEG2V4v+kxkso21dB9YmmKbSnyRairNr2IIeyNrPWL
+NZShI6UHAgMBAAECggEAEXK2CY2ujYiS5yvV7fn3ogIS/q2/hC/Zzx73ahaTXWdv
+tfNwK9T1UL8fbRyHgr3aaBnn6KBAOdP7TuxRksQYinHrMBdH3ZIaA8UaQalnwC9e
+uZN0wjIQAhC6rwCFuV0pzk90woiO2AcqB4ghsMmxlXulLJryZi0073ppXu4jwKg+
+H9vdUlzNYUUHJVvHWIiv+ITN43Xx0EYRIe6n5e/ZeZ4hAFqtmqzb+rSOXgmgqIMw
+oGBW/OZbvlkJsGWHyGZeZSLL+iJXNDJDk8YFv3arpbInBk3OYQk9UPYY82l3f1au
+DlWtL389kSgyJ/Gfvr30qDhs1WEN5Te2//HZu5l7YQKBgQDrH5WbxHJzk/Hc1jpK
+JQmUlB2t26Cv+/+fOzAz5KHgFX2RLjXIHl5iufib3HM+nbUOe66As7U0r7/Va0Nn
+1qppy05HL4ZzA36bsQ8Fw5prdVQjjU+r4c1wEaY8O13ckzL6qKZIOGNEuBF0vRoq
+zGxN8iYsZ3MW6JX7E3zK/FvpYQKBgQDodXl5CJMw/67n6o/DlmnoxMdUNKXvyoxs
+Udz/daKX682tGBLa06u1ZCCMCJYgahQwqRv15apTscOvy5sBQraz8H/UGc3v0AZ0
+Dz5zyOaLw9pHv9C7MuDRhzd708Q3Z/Gh4YK6+syae6gposLh1wLqIbRUOTuCZGA6
+RSFZ4qYfZwKBgQCczEZgR6Sv0RS1WiQrOAHolNIqFFJXqi0xSi5+HNWa85n2jKOP
+HjmBi1Xw0xYDxvZsfyzDZZTNWvsKX2rnP7ALt2ovbNEzuDvhpjVHecdsLCV9RArC
+rGXte8epWUniBEQ2BuxFM114AWyatlVR/1umq3qrmB2XRGposvlBAQRmYQKBgQCS
+lwIzQSURESvLNC/Ut1WyY+UPROQfgytqY3Vp41TVWO4q6bN6K2Fs0ed0ZzXE2yBA
+T2RCfMIcZU1x3oOxF9D/R/pUVrF3OUfYiIRpn5dDLA7KkDug0UTU3OAwRirGhdXq
+r7sxDldYVAKHvwwGPwCnhPmi4zST1ZiZJl8Rv8vioQKBgQDOiy1z7ezJzgJSNoKz
+ee5zOWdsSRkxHBKRtc1vbBIxEg+z+838+TxXf2EJhkOA11OQptLGZ41iziR41P6A
+qZRp3lzXySc6REVOJI969AZSGovOFYPX6YguCb6X4wSuc/Avn+3AT/0bE6eMTAhX
+FgTYhJbE4mHJCmVUxn1C+iUleg==\n-----END PRIVATE KEY-----`,
+  client_email: "ccsrepo@ccsrepository-444308.iam.gserviceaccount.com",
+  client_id: "103197742225204345135",
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ccsrepo%40ccsrepository-444308.iam.gserviceaccount.com",
+  universe_domain: "googleapis.com",
 };
+
 
 const auth = new google.auth.GoogleAuth({
   credentials: googleServiceAccount,
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
-const drive = google.drive({ version: "v3", auth });
 
-// Multer setup for memory storage
+const drive = google.drive({
+  version: "v3",
+  auth,
+});
+
+
+
+
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper function to convert a buffer to a stream
+
 const bufferToStream = (buffer) => {
   const readable = new Readable();
   readable.push(buffer);
@@ -39,165 +75,192 @@ const bufferToStream = (buffer) => {
   return readable;
 };
 
-// Endpoint to upload a research document
+
 router.post("/upload", upload.single("file"), async (req, res) => {
-  const connection = await db.getConnection();
   try {
-    // Validate file type
     if (!req.file || req.file.mimetype !== "application/pdf") {
-      return res.status(400).json({ error: "Only PDF files are allowed!" });
+      return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
     }
+
 
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
 
-    // Validate required fields
-    if (!authors || !categories || !keywords) {
-      return res.status(400).json({ error: "Authors, categories, and keywords are required!" });
-    }
 
-    // Process authors, categories, and keywords
-    const authorList = authors.split(",").map((author) => {
-      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/);
-      if (!match) return null;
+    // Validate input fields
+    if (!authors) return res.status(400).json({ error: "Authors are required!" });
+    if (!categories) return res.status(400).json({ error: "Categories are required!" });
+    if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
+
+
+    // Split authors into an array of objects containing author_name and email
+    const authorList = authors
+  ? authors.split(',').map(author => {
+      // Match the format "name (email)"
+      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/); // Regex to capture name and email
+      if (!match) {
+        console.warn(`Invalid author format for: ${author}`);
+        return null; // or handle however you'd like
+      }
       const [, author_name, email] = match;
-      return { author_name: author_name.trim(), email: email.trim() };
-    }).filter((author) => author !== null);
+      return {
+        author_name: author_name.trim(),
+        email: email.trim()
+      };
+  }).filter(author => author !== null) // Remove any invalid entries
+  : [];
 
-    const categoryList = categories.split(",").map((name) => name.trim());
-    const keywordList = keywords.split(",").map((name) => name.trim());
+
+    const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
+    const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
+
 
     // Upload file to Google Drive
-    const fileMetadata = { name: req.file.originalname, parents: [process.env.DRIVE_FOLDER_ID] };
-    const media = { mimeType: req.file.mimetype, body: bufferToStream(req.file.buffer) };
-    const driveResponse = await drive.files.create({ resource: fileMetadata, media, fields: "id" });
+    const fileMetadata = {
+      name: req.file.originalname, // Use the original file name
+      parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
+    };
+    const media = {
+      mimeType: req.file.mimetype,
+      body: bufferToStream(req.file.buffer),
+    };
+
+
+    const driveResponse = await drive.files.create({
+      resource: fileMetadata,
+      media,
+      fields: "id",
+    });
+
+
     const fileId = driveResponse.data.id;
 
-    // Validate uploader ID
+
+    // Validate uploader_id
     if (!uploader_id || isNaN(uploader_id)) {
       return res.status(400).json({ error: "Invalid uploader ID!" });
     }
 
-    // Check uploader role
-    const [[uploader]] = await connection.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
-    if (!uploader) return res.status(404).json({ error: "Uploader not found!" });
 
-    const status = uploader.role_id === 1 ? "approved" : "pending";
+    // Check the roleId of the uploader
+    const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
+    if (uploader.length === 0) {
+      return res.status(404).json({ error: "Uploader not found!" });
+    }
 
-    // Check for duplicate title
-    const [[existingDocument]] = await connection.query("SELECT title FROM researches WHERE title = ?", [title]);
-    if (existingDocument) return res.status(409).json({ error: "Document with this title already exists!" });
 
-    // Begin MySQL transaction
-    await connection.beginTransaction();
+    const role_id = uploader[0].role_id;
 
-    // Insert research record
-    const [result] = await connection.query(
+
+    // Set the default status
+    let status = role_id === 1 ? "approved" : "pending";
+
+
+    // Check if title already exists
+    const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
+    if (existingDocument.length > 0) {
+      return res.status(409).json({ error: "Document with this title already exists!" });
+    }
+
+
+    // Insert research with the file ID from Google Drive
+    const [result] = await db.query(
       "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
-      [title, abstract, req.file.originalname, uploader_id, status, fileId]
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
     );
+   
     const researchId = result.insertId;
 
-    // Handle authors, categories, and keywords
-    if (authorList.length > 0) {
-      const authorInserts = authorList.map(({ author_name, email }) => [author_name, email]);
-      await connection.query(
-        `INSERT INTO authors (author_name, email) VALUES ? 
-         ON DUPLICATE KEY UPDATE author_id=LAST_INSERT_ID(author_id)`,
-        [authorInserts]
-      );
-      const [authorRecords] = await connection.query("SELECT author_id FROM authors WHERE email IN (?)", [
-        authorList.map(({ email }) => email),
-      ]);
-      const authorRelations = authorRecords.map(({ author_id }) => [researchId, author_id]);
-      await connection.query("INSERT INTO research_authors (research_id, author_id) VALUES ?", [authorRelations]);
-    }
 
-    if (categoryList.length > 0) {
-      const categoryInserts = categoryList.map((name) => [name]);
-      await connection.query(
-        `INSERT INTO category (category_name) VALUES ? 
-         ON DUPLICATE KEY UPDATE category_id=LAST_INSERT_ID(category_id)`,
-        [categoryInserts]
-      );
-      const [categoryRecords] = await connection.query("SELECT category_id FROM category WHERE category_name IN (?)", [
-        categoryList,
-      ]);
-      const categoryRelations = categoryRecords.map(({ category_id }) => [researchId, category_id]);
-      await connection.query("INSERT INTO research_categories (research_id, category_id) VALUES ?", [categoryRelations]);
-    }
-
-    if (keywordList.length > 0) {
-      const keywordInserts = keywordList.map((name) => [name]);
-      await connection.query(
-        `INSERT INTO keywords (keyword_name) VALUES ? 
-         ON DUPLICATE KEY UPDATE keyword_id=LAST_INSERT_ID(keyword_id)`,
-        [keywordInserts]
-      );
-      const [keywordRecords] = await connection.query("SELECT keyword_id FROM keywords WHERE keyword_name IN (?)", [
-        keywordList,
-      ]);
-      const keywordRelations = keywordRecords.map(({ keyword_id }) => [researchId, keyword_id]);
-      await connection.query("INSERT INTO research_keywords (research_id, keyword_id) VALUES ?", [keywordRelations]);
-    }
-
-    // Commit transaction
-    await connection.commit();
-
-    // Prepare data for restDB
-    const restDBData = {
-      title,
-      abstract,
-      authors: authorList,
-      categories: categoryList,
-      keywords: keywordList,
-      fileId,
-      status,
-      uploader_id,
-      publish_date: new Date().toISOString(),
+    // Insert authors into the authors table and associate with the research
+    const insertAuthors = async (researchId, authors) => {
+      for (const { author_name, email } of authors) {
+        let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [author_name, email]);
+        if (authorRecord.length === 0) {
+            const [result] = await db.query('INSERT INTO authors (author_name, email) VALUES (?, ?)', [author_name, email]);
+            authorRecord = { author_id: result.insertId };
+        } else {
+            authorRecord = authorRecord[0];
+        }
+        await db.query('INSERT INTO research_authors (research_id, author_id) VALUES (?, ?)', [researchId, authorRecord.author_id]);
+      }
     };
 
-    // Post data to restDB
-    const restDBResponse = await axios.post("https://www-ccsnexus-3c3f.restdb.io/restdb-research", restDBData, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-apikey": '10de4bbb0fbd2a5ddd74f21ff76bae188fc02', // API key from environment variables
-      },
-    });
 
-    if (restDBResponse.status === 201) {
-      res.status(201).json({ message: "Research uploaded successfully to MySQL and restDB!" });
-    } else {
-      throw new Error("Failed to post data to restDB.");
-    }
-  } catch (err) {
-    await connection.rollback();
-    console.error("Error uploading research:", err);
-    res.status(500).json({ error: "An error occurred while uploading the research" });
-  } finally {
-    connection.release();
-  }
-});
+    await insertAuthors(researchId, authorList);
 
-// Endpoint to delete a research document
-router.delete("/delete-research/:research_id", async (req, res) => {
-  const { research_id } = req.params;
 
-  if (!research_id) {
-    return res.status(400).json({ message: "Research ID is required." });
-  }
+    // Insert categories
+    const insertCategories = async (researchId, categories) => {
+      for (const name of categories) {
+          let [category] = await db.query('SELECT category_id FROM category WHERE category_name = ?', [name]);
+          if (category.length === 0) {
+              const [result] = await db.query('INSERT INTO category (category_name) VALUES (?)', [name]);
+              category = { category_id: result.insertId };
+          } else {
+              category = category[0];
+          }
+          await db.query('INSERT INTO research_categories (research_id, category_id) VALUES (?, ?)', [researchId, category.category_id]);
+      }
+    };
 
-  try {
-    const [result] = await db.query("DELETE FROM researches WHERE research_id = ?", [research_id]);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Research not found." });
-    }
+    await insertCategories(researchId, categoryList);
 
-    res.status(200).json({ message: "Research and associated records deleted successfully!" });
+
+    // Insert keywords
+    const insertKeywords = async (researchId, keywords) => {
+      for (const name of keywords) {
+          let [keyword] = await db.query('SELECT keyword_id FROM keywords WHERE keyword_name = ?', [name]);
+          if (keyword.length === 0) {
+              const [result] = await db.query('INSERT INTO keywords (keyword_name) VALUES (?)', [name]);
+              keyword = { keyword_id: result.insertId };
+          } else {
+              keyword = keyword[0];
+          }
+          await db.query('INSERT INTO research_keywords (research_id, keyword_id) VALUES (?, ?)', [researchId, keyword.keyword_id]);
+      }
+    };
+
+
+    await insertKeywords(researchId, keywordList);
+
+
+    res.status(201).json({ message: "Research uploaded successfully!" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "An error occurred while deleting the research." });
+    res.status(500).json({ error: "An error occurred while uploading the research" });
   }
 });
 
+
+router.delete('/delete-research/:research_id', async (req, res) => {
+  const research_id = req.params.research_id;
+
+
+  if (!research_id) {
+      return res.status(400).json({ message: 'Research ID is required.' });
+  }
+
+
+  try {
+      // Delete research entry, cascading to related tables
+      const [result] = await db.query("DELETE FROM researches WHERE research_id = ?", [research_id]);
+
+
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ message: 'Research not found.' });
+      }
+
+
+      res.status(200).json({ message: 'Research and associated records deleted successfully!' });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'An error occurred while deleting the research.' });
+  }
+});
+
+
+
+
 module.exports = router;
+
