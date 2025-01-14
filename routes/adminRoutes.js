@@ -189,6 +189,60 @@ GROUP BY r.research_id, c.category_name;
 
 
 
+
+// View all researches
+router.get("/dash/researches", async (req, res) => {
+  try {
+    // Query to get research details along with download, citation, and view counts
+    const [researches] = await db.query(`
+    SELECT r.research_id, 
+       r.title, 
+       r.publish_date, 
+       r.abstract, 
+       r.filename, 
+       r.status,
+       GROUP_CONCAT(DISTINCT a.author_name) AS authors,
+       GROUP_CONCAT(DISTINCT a.email) AS authors_emails,
+       GROUP_CONCAT(DISTINCT k.keyword_name) AS keywords,
+       c.category_name AS category,
+       COALESCE(SUM(d.download_count), 0) AS total_downloads,
+       COALESCE(SUM(cit.citation_count), 0) AS total_citations,
+       COALESCE(SUM(v.view_count), 0) AS total_views
+FROM researches r
+LEFT JOIN research_authors ra ON r.research_id = ra.research_id
+LEFT JOIN authors a ON ra.author_id = a.author_id
+LEFT JOIN (
+    SELECT research_id, SUM(download_count) AS download_count
+    FROM downloads
+    GROUP BY research_id
+) d ON r.research_id = d.research_id
+LEFT JOIN (
+    SELECT research_id, SUM(citation_count) AS citation_count
+    FROM citations
+    GROUP BY research_id
+) cit ON r.research_id = cit.research_id
+LEFT JOIN (
+    SELECT research_id, SUM(view_count) AS view_count
+    FROM views
+    GROUP BY research_id
+) v ON r.research_id = v.research_id
+LEFT JOIN research_keywords rk ON r.research_id = rk.research_id
+LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
+LEFT JOIN research_categories rc ON r.research_id = rc.research_id
+LEFT JOIN category c ON rc.category_id = c.category_id
+GROUP BY r.research_id, c.category_name;
+
+
+    `);
+
+    res.status(200).json(researches);
+  } catch (error) {
+    console.error("Error getting researches:", error);
+    res.status(500).json({ error: "An error occurred while getting researches" });
+  }
+});
+
+
 router.get("/researches/rejected", async (req, res) => {
   try {
     const { notificationId } = req.query; // Optionally filter by notificationId
@@ -227,6 +281,11 @@ router.get("/researches/rejected", async (req, res) => {
       .json({ error: "An error occurred while getting rejected researches" });
   }
 });
+
+
+
+
+
 
 // Route to get total downloads
 // Get total citation count
