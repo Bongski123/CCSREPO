@@ -162,7 +162,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         'Content-Type': 'application/json',
       },
     });
-
+    console.log('RestDB response:', response.data);  // Log the response to debug
     if (response.status !== 200) {
       return res.status(500).json({ error: "Failed to save metadata to RestDB" });
     }
