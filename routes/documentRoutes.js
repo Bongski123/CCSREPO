@@ -2,10 +2,10 @@ const express = require("express");
 const { google } = require("googleapis");
 const multer = require("multer");
 const { Readable } = require('stream');
-const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const db = require("../database/db");
+
 
 const router = express.Router();
 
@@ -82,35 +82,41 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Invalid file type, only PDFs are allowed!" });
     }
 
+
     const { title, authors, categories, keywords, abstract, uploader_id } = req.body;
+
 
     // Validate input fields
     if (!authors) return res.status(400).json({ error: "Authors are required!" });
     if (!categories) return res.status(400).json({ error: "Categories are required!" });
     if (!keywords) return res.status(400).json({ error: "Keywords are required!" });
 
+
     // Split authors into an array of objects containing author_name and email
     const authorList = authors
-      ? authors.split(',').map(author => {
-          const match = author.match(/^(.+?)\s?\(([^)]+)\)$/);
-          if (!match) {
-            console.warn(`Invalid author format for: ${author}`);
-            return null;
-          }
-          const [, author_name, email] = match;
-          return {
-            author_name: author_name.trim(),
-            email: email.trim(),
-          };
-      }).filter(author => author !== null)
-      : [];
+  ? authors.split(',').map(author => {
+      // Match the format "name (email)"
+      const match = author.match(/^(.+?)\s?\(([^)]+)\)$/); // Regex to capture name and email
+      if (!match) {
+        console.warn(`Invalid author format for: ${author}`);
+        return null; // or handle however you'd like
+      }
+      const [, author_name, email] = match;
+      return {
+        author_name: author_name.trim(),
+        email: email.trim()
+      };
+  }).filter(author => author !== null) // Remove any invalid entries
+  : [];
+
 
     const categoryList = categories ? categories.split(',').map(name => name.trim()) : [];
     const keywordList = keywords ? keywords.split(',').map(name => name.trim()) : [];
 
+
     // Upload file to Google Drive
     const fileMetadata = {
-      name: req.file.originalname,
+      name: req.file.originalname, // Use the original file name
       parents: ["1z4LekckQJPlZbgduf5FjDQob3zmtAElc"], // Replace with your folder ID
     };
     const media = {
@@ -118,57 +124,54 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       body: bufferToStream(req.file.buffer),
     };
 
+
     const driveResponse = await drive.files.create({
       resource: fileMetadata,
       media,
       fields: "id",
     });
 
+
     const fileId = driveResponse.data.id;
 
-    // Check uploader role and status
+
+    // Validate uploader_id
+    if (!uploader_id || isNaN(uploader_id)) {
+      return res.status(400).json({ error: "Invalid uploader ID!" });
+    }
+
+
+    // Check the roleId of the uploader
     const [uploader] = await db.query("SELECT role_id FROM users WHERE user_id = ?", [uploader_id]);
     if (uploader.length === 0) {
       return res.status(404).json({ error: "Uploader not found!" });
     }
 
+
     const role_id = uploader[0].role_id;
+
+
+    // Set the default status
     let status = role_id === 1 ? "approved" : "pending";
 
-    // Check if title exists in the database
+
+    // Check if title already exists
     const [existingDocument] = await db.query("SELECT title FROM researches WHERE title = ?", [title]);
     if (existingDocument.length > 0) {
       return res.status(409).json({ error: "Document with this title already exists!" });
     }
 
-    // Save research metadata to RestDB
-    const restDBUrl = "https://ccsnexus-3c3f.restdb.io/rest/researches"; // Corrected URL
-    const restDBApiKey = "10de4bbb0fbd2a5ddd74f21ff76bae188fc02"; // Replace with your RestDB API Key
-    const researchMetadata = {
-      title,
-      abstract,
-      uploader_id,
-      status,
-      file_id: fileId,
-      authors: authorList,
-      categories: categoryList,
-      keywords: keywordList,
-    };
 
-    const response = await axios.post(restDBUrl, researchMetadata, {
-      headers: {
-        'x-apikey': restDBApiKey,
-        'Content-Type': 'application/json',
-      },
-    });
-    console.log('RestDB response:', response.data);  // Log the response to debug
-    if (response.status !== 200) {
-      return res.status(500).json({ error: "Failed to save metadata to RestDB" });
-    }
+    // Insert research with the file ID from Google Drive
+    const [result] = await db.query(
+      "INSERT INTO researches (title, publish_date, abstract, filename, uploader_id, status, file_id) VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+      [title, abstract, req.file.originalname, uploader_id, status, fileId]  // Use req.file.originalname for filename
+    );
+   
+    const researchId = result.insertId;
 
-    const researchId = response.data._id; // Assuming RestDB returns the inserted document ID
 
-    // Insert authors into the database
+    // Insert authors into the authors table and associate with the research
     const insertAuthors = async (researchId, authors) => {
       for (const { author_name, email } of authors) {
         let [authorRecord] = await db.query('SELECT author_id FROM authors WHERE author_name = ? AND email = ?', [author_name, email]);
@@ -182,7 +185,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
+
     await insertAuthors(researchId, authorList);
+
 
     // Insert categories
     const insertCategories = async (researchId, categories) => {
@@ -198,7 +203,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
+
     await insertCategories(researchId, categoryList);
+
 
     // Insert keywords
     const insertKeywords = async (researchId, keywords) => {
@@ -214,7 +221,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
+
     await insertKeywords(researchId, keywordList);
+
 
     res.status(201).json({ message: "Research uploaded successfully!" });
   } catch (err) {
