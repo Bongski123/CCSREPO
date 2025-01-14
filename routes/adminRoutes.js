@@ -139,7 +139,7 @@ router.get("/researches", async (req, res) => {
   try {
     // Query to get research details along with download, citation, and view counts
     const [researches] = await db.query(`
-     SELECT r.research_id, 
+    SELECT r.research_id, 
        r.title, 
        r.publish_date, 
        r.abstract, 
@@ -174,7 +174,9 @@ LEFT JOIN research_keywords rk ON r.research_id = rk.research_id
 LEFT JOIN keywords k ON rk.keyword_id = k.keyword_id
 LEFT JOIN research_categories rc ON r.research_id = rc.research_id
 LEFT JOIN category c ON rc.category_id = c.category_id
+WHERE r.status = 'approved'
 GROUP BY r.research_id, c.category_name;
+
 
     `);
 
