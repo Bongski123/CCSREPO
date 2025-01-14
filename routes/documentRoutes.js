@@ -142,7 +142,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Save research metadata to RestDB
-    const restDBUrl = "/https/ccsnexus-3c3f.restdb.io/rest/researches"; // Replace with your RestDB URL
+    const restDBUrl = "https://ccsnexus-3c3f.restdb.io/rest/researches"; // Corrected URL
     const restDBApiKey = "10de4bbb0fbd2a5ddd74f21ff76bae188fc02"; // Replace with your RestDB API Key
     const researchMetadata = {
       title,
@@ -154,7 +154,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       categories: categoryList,
       keywords: keywordList,
     };
-    
 
     const response = await axios.post(restDBUrl, researchMetadata, {
       headers: {
@@ -223,6 +222,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "An error occurred while uploading the research" });
   }
 });
+
 
 router.delete('/delete-research/:research_id', async (req, res) => {
   const research_id = req.params.research_id;
