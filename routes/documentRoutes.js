@@ -5,7 +5,7 @@ const { Readable } = require('stream');
 const fs = require("fs");
 const path = require("path");
 const db = require("../database/db");
-
+const axios = require('axios'); 
 
 const router = express.Router();
 
@@ -223,6 +223,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
 
     await insertKeywords(researchId, keywordList);
+
+    
+    // After successful upload and database updates, make a call to the external API
+    await axios.get('https://ncfrepository-backend-1.onrender.com/research/reload', {});
 
 
     res.status(201).json({ message: "Research uploaded successfully!" });
